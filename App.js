@@ -1,4 +1,5 @@
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
+
 import {
   View,
   Text,
@@ -7,114 +8,206 @@ import {
   StyleSheet,
   SafeAreaView,
   StatusBar,
-  Animated,
-  Dimensions,
   ScrollView,
+  Alert,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
+  Image,
 } from "react-native";
 
-const { width } = Dimensions.get("window");
+import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 
-const NAVY = "#0D0B3D";
-const DARK = "#202027";
-const GREEN = "#19B394";
-const LIGHT = "#E8E8E8";
-const WHITE = "#FFFFFF";
-const GRAY = "#888888";
+/* =========================================================
+   COLORS
+========================================================= */
+
+const COLORS = {
+  black: "#09090B",
+  navy: "#101117",
+  card: "#181920",
+  green: "#19B394",
+  greenDark: "#118D78",
+  white: "#FFFFFF",
+  gray: "#92939A",
+  lightGray: "#C8C8CC",
+  border: "#303139",
+  red: "#FF4545",
+  blue: "#5D7EFF",
+  yellow: "#E9B94B",
+};
+const logout = () => {
+  setUser(null);
+  setMenuVisible(false);
+  setScreen("signin");
+};
+
+/* =========================================================
+   MAIN APP
+========================================================= */
 
 export default function App() {
-  const [page, setPage] = useState("signin");
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [screen, setScreen] = useState("landing");
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [user, setUser] = useState(null);
 
-  const slide = useRef(new Animated.Value(0)).current;
+  const [expenses, setExpenses] = useState([
+    {
+      id: 1,
+      name: "Uniqlo",
+      category: "Shopping",
+      amount: 534.4,
+      date: "Today",
+    },
+    {
+      id: 2,
+      name: "Jollibee",
+      category: "Food & Dining",
+      amount: 520,
+      date: "Today",
+    },
+    {
+      id: 3,
+      name: "Netflix",
+      category: "Entertainment",
+      amount: 459,
+      date: "Yesterday",
+    },
+  ]);
 
-  const changePage = (nextPage) => {
-    setMenuOpen(false);
+  /* =======================================================
+     NAVIGATION
+  ======================================================= */
 
-    Animated.timing(slide, {
-      toValue: 1,
-      duration: 250,
-      useNativeDriver: true,
-    }).start(() => {
-      setPage(nextPage);
-      slide.setValue(-1);
-
-      Animated.timing(slide, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    });
+  const navigate = (page) => {
+    setMenuVisible(false);
+    setScreen(page);
   };
 
-  const animatedStyle = {
-    transform: [
+  /* =======================================================
+     ADD EXPENSE
+  ======================================================= */
+
+  const addExpense = (expense) => {
+    setExpenses((previous) => [
       {
-        translateX: slide.interpolate({
-          inputRange: [-1, 0, 1],
-          outputRange: [-width, 0, width],
-        }),
+        ...expense,
+        id: Date.now(),
+        date: "Today",
       },
-    ],
+      ...previous,
+    ]);
+  };
+
+  /* =======================================================
+     LOGOUT
+  ======================================================= */
+
+  const logout = () => {
+    setUser(null);
+    setMenuVisible(false);
+
+    // Go to SIGN IN after logout
+    setScreen("signin");
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={COLORS.black}
+      />
 
-      <Animated.View style={[styles.screen, animatedStyle]}>
-        {page === "signin" && (
-          <SignIn
-            go={changePage}
+      <View style={styles.container}>
+
+        {/* LANDING */}
+
+        {screen === "landing" && (
+          <LandingScreen
+            onMenu={() => setMenuVisible(true)}
+            onCreate={() => navigate("create")}
+            onSignIn={() => navigate("signin")}
+            onHow={() => navigate("how")}
           />
         )}
 
-        {page === "signup" && (
-          <CreateAccount
-            go={changePage}
+        {/* HOW IT WORKS */}
+
+        {screen === "how" && (
+          <HowItWorksScreen
+            onMenu={() => setMenuVisible(true)}
+            onCreate={() => navigate("create")}
+            onSignIn={() => navigate("signin")}
           />
         )}
 
-        {page === "setup" && (
-          <Setup
-            go={changePage}
+        {/* CREATE ACCOUNT */}
+
+        {screen === "create" && (
+          <CreateAccountScreen
+            onBack={() => navigate("landing")}
+            onSignIn={() => navigate("signin")}
+            onCreate={(newUser) => {
+              setUser(newUser);
+              navigate("dashboard");
+            }}
           />
         )}
 
-        {page === "dashboard" && (
-          <Dashboard
-            go={changePage}
-            openMenu={() => setMenuOpen(true)}
+        {/* SIGN IN */}
+
+        {screen === "signin" && (
+          <SignInScreen
+            onBack={() => navigate("landing")}
+            onCreate={() => navigate("create")}
+            onLogin={(loggedUser) => {
+              setUser(loggedUser);
+              navigate("dashboard");
+            }}
           />
         )}
 
-        {page === "records" && (
-          <Records
-            go={changePage}
-            openMenu={() => setMenuOpen(true)}
+        {/* DASHBOARD */}
+
+        {screen === "dashboard" && (
+          <DashboardScreen
+            user={user}
+            expenses={expenses}
+            onNavigate={navigate}
+            onAddExpense={addExpense}
           />
         )}
 
-        {page === "profile" && (
-          <Profile
-            go={changePage}
-            openMenu={() => setMenuOpen(true)}
+        {/* RECORDS */}
+
+        {screen === "records" && (
+          <RecordsScreen
+            expenses={expenses}
+            onNavigate={navigate}
+            onAddExpense={addExpense}
           />
         )}
 
-        {page === "report" && (
-          <Report
-            go={changePage}
-            openMenu={() => setMenuOpen(true)}
+        {/* PROFILE */}
+
+        {screen === "profile" && (
+          <ProfileScreen
+            user={user}
+            onNavigate={navigate}
+            onLogout={logout}
           />
         )}
-      </Animated.View>
 
-      {menuOpen && (
-        <SideMenu
-          go={changePage}
-          closeMenu={() => setMenuOpen(false)}
+        {/* MENU */}
+
+        <MobileMenu
+          visible={menuVisible}
+          onClose={() => setMenuVisible(false)}
+          onNavigate={navigate}
         />
-      )}
+
+      </View>
     </SafeAreaView>
   );
 }
@@ -123,80 +216,360 @@ export default function App() {
    HEADER
 ========================================================= */
 
-function Header({ openMenu }) {
+function Header({
+  onMenu,
+  showBack = false,
+  onBack,
+}) {
   return (
     <View style={styles.header}>
-      <Text style={styles.menuIcon} onPress={openMenu}>
-        ☰
+
+      {showBack ? (
+        <TouchableOpacity
+          onPress={onBack}
+          style={styles.headerIcon}
+        >
+          <Ionicons
+            name="arrow-back"
+            size={23}
+            color={COLORS.white}
+          />
+        </TouchableOpacity>
+      ) : (
+        <View style={{ width: 35 }} />
+      )}
+
+      <Text style={styles.logo}>
+        RECEIPT
+        <Text style={styles.logoGreen}>
+          IQ
+        </Text>
       </Text>
 
-      <View style={styles.statusRight}>
-        <Text style={styles.statusText}>● ● ▰</Text>
-      </View>
+      {onMenu ? (
+        <TouchableOpacity
+          onPress={onMenu}
+          style={styles.headerIcon}
+        >
+          <Ionicons
+            name="menu"
+            size={30}
+            color={COLORS.gray}
+          />
+        </TouchableOpacity>
+      ) : (
+        <View style={{ width: 35 }} />
+      )}
+
     </View>
   );
 }
 
 /* =========================================================
-   SIGN IN
+   TAG
 ========================================================= */
 
-function SignIn({ go }) {
+function Tag({ text }) {
   return (
-    <View style={styles.fullDark}>
-      <Header openMenu={() => {}} />
+    <View style={styles.tag}>
 
-      <View style={styles.topWelcome}>
-        <View style={styles.smallSquare} />
+      <View style={styles.diamond} />
 
-        <Text style={styles.welcomeText}>
-          Welcome Back.
+      <Text style={styles.tagText}>
+        {text}
+      </Text>
+
+    </View>
+  );
+}
+
+/* =========================================================
+   LANDING SCREEN
+========================================================= */
+
+function LandingScreen({
+  onMenu,
+  onCreate,
+  onSignIn,
+  onHow,
+}) {
+  return (
+    <View style={styles.page}>
+
+      <Header onMenu={onMenu} />
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.landingContent}
+      >
+
+        <Tag text="EXPENSE MANAGEMENT, ITEMIZED" />
+
+        <Text style={styles.heroTitle}>
+          Every Receipt.
+          {"\n"}
+          Accounted For.
         </Text>
 
-        <Text style={styles.welcomeSub}>
-          Good To See You Again.
-        </Text>
-      </View>
-
-      <View style={styles.formBox}>
-        <Text style={styles.formTitle}>SIGN IN</Text>
-
-        <Text style={styles.formDescription}>
-          Enter your details to continue.
+        <Text style={styles.heroDescription}>
+          ReceiptIQ scans, categorizes, and
+          {"\n"}
+          reconciles every expense the moment it
+          {"\n"}
+          lands in your inbox.
         </Text>
 
-        <Text style={styles.label}>Email</Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="username@email.com"
-          placeholderTextColor="#777"
+        <PrimaryButton
+          title="Get Started Free"
+          onPress={onCreate}
         />
 
-        <Text style={styles.label}>Password</Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="••••••••"
-          placeholderTextColor="#777"
-          secureTextEntry
+        <SecondaryButton
+          title="See how it works"
+          onPress={onHow}
         />
 
         <TouchableOpacity
-          style={styles.greenButton}
-          onPress={() => go("setup")}
+          style={styles.signInBottom}
+          onPress={onSignIn}
         >
-          <Text style={styles.greenButtonText}>
-            Sign In
+          <Text style={styles.footerText}>
+            Already have an account?{" "}
+            <Text style={styles.greenText}>
+              Sign In
+            </Text>
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => go("signup")}>
-          <Text style={styles.accountText}>
-            New here? Create an Account
-          </Text>
-        </TouchableOpacity>
+        <ReceiptPreview />
+
+      </ScrollView>
+
+    </View>
+  );
+}
+
+/* =========================================================
+   RECEIPT PREVIEW
+========================================================= */
+
+function ReceiptPreview() {
+  return (
+    <View style={styles.receiptWrapper}>
+
+      <View style={styles.receipt}>
+
+        <Text style={styles.receiptTitle}>
+          RECEIPTIQ
+        </Text>
+
+        <View style={styles.receiptLine} />
+
+        <Text style={styles.receiptNumber}>
+          RECEIPT # 0004251
+        </Text>
+
+        <View style={styles.receiptLine} />
+
+        <ReceiptRow
+          text="2 Transportation"
+          amount="₱ 100"
+        />
+
+        <ReceiptRow
+          text="1 Meals"
+          amount="₱ 100"
+        />
+
+        <ReceiptRow
+          text="2 School Supplies"
+          amount="₱ 500"
+        />
+
+        <ReceiptRow
+          text="5 Communication"
+          amount="₱ 500"
+        />
+
+        <View style={styles.receiptLine} />
+
+        <ReceiptRow
+          text="Subtotal"
+          amount="₱ 1200"
+        />
+
+        <ReceiptRow
+          text="Tax"
+          amount="₱ 25"
+        />
+
+        <View style={{ height: 15 }} />
+
+        <ReceiptRow
+          text="Total"
+          amount="₱ 1225"
+        />
+
+        <ReceiptRow
+          text="Cash"
+          amount="₱ 1500"
+        />
+
+        <ReceiptRow
+          text="Change"
+          amount="₱ 275"
+        />
+
+        <Text style={styles.receiptDate}>
+          8/8/2026 10:28:54 AM
+        </Text>
+
       </View>
+
+    </View>
+  );
+}
+
+function ReceiptRow({
+  text,
+  amount,
+}) {
+  return (
+    <View style={styles.receiptRow}>
+
+      <Text style={styles.receiptText}>
+        {text}
+      </Text>
+
+      <Text style={styles.receiptText}>
+        {amount}
+      </Text>
+
+    </View>
+  );
+}
+
+/* =========================================================
+   HOW IT WORKS
+========================================================= */
+
+function HowItWorksScreen({
+  onMenu,
+  onCreate,
+  onSignIn,
+}) {
+  const steps = [
+    {
+      number: "01",
+      icon: "person-outline",
+      title: "Create Your Account",
+      description:
+        "Register and log in securely to get your own private space for every expense record.",
+    },
+    {
+      number: "02",
+      icon: "camera-outline",
+      title: "Add or Scan a Receipt",
+      description:
+        "Take a photo of a receipt or add an expense manually.",
+    },
+    {
+      number: "03",
+      icon: "pricetag-outline",
+      title: "Sorted and Tracked",
+      description:
+        "Each expense is organized into categories such as Food, Transport and Shopping.",
+    },
+    {
+      number: "04",
+      icon: "search-outline",
+      title: "Review and Search",
+      description:
+        "Search your records and review your spending whenever you need them.",
+    },
+  ];
+
+  return (
+    <View style={styles.page}>
+
+      <Header onMenu={onMenu} />
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.howContent}
+      >
+
+        <Tag text="HOW IT WORKS" />
+
+        <Text style={styles.howTitle}>
+          From sign-up to
+          {"\n"}
+          spending clarity,
+          {"\n"}
+          in four steps.
+        </Text>
+
+        <Text style={styles.heroDescription}>
+          Every feature works together
+          {"\n"}
+          from your first login to your
+          {"\n"}
+          monthly report.
+        </Text>
+
+        {steps.map((step) => (
+          <View
+            style={styles.stepCard}
+            key={step.number}
+          >
+
+            <View style={styles.stepIcon}>
+
+              <Ionicons
+                name={step.icon}
+                size={27}
+                color={COLORS.green}
+              />
+
+            </View>
+
+            <View style={styles.stepContent}>
+
+              <Text style={styles.stepNumber}>
+                STEP {step.number}
+              </Text>
+
+              <Text style={styles.stepTitle}>
+                {step.title}
+              </Text>
+
+              <Text style={styles.stepDescription}>
+                {step.description}
+              </Text>
+
+            </View>
+
+          </View>
+        ))}
+
+        <PrimaryButton
+          title="Get Started Free"
+          onPress={onCreate}
+        />
+
+        <TouchableOpacity
+          style={styles.signInBottom}
+          onPress={onSignIn}
+        >
+
+          <Text style={styles.signInText}>
+            Sign In
+          </Text>
+
+        </TouchableOpacity>
+
+      </ScrollView>
+
     </View>
   );
 }
@@ -205,153 +578,297 @@ function SignIn({ go }) {
    CREATE ACCOUNT
 ========================================================= */
 
-function CreateAccount({ go }) {
+function CreateAccountScreen({
+  onBack,
+  onSignIn,
+  onCreate,
+}) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const createAccount = () => {
+
+    if (!name.trim()) {
+      Alert.alert(
+        "Missing Name",
+        "Please enter your name."
+      );
+      return;
+    }
+
+    if (!email.trim()) {
+      Alert.alert(
+        "Missing Email",
+        "Please enter your email."
+      );
+      return;
+    }
+
+    if (!password) {
+      Alert.alert(
+        "Missing Password",
+        "Please enter a password."
+      );
+      return;
+    }
+
+    onCreate({
+      name: name.trim(),
+      email: email.trim(),
+    });
+  };
+
   return (
-    <View style={styles.fullDark}>
-      <Header openMenu={() => {}} />
-
-      <View style={styles.topWelcome}>
-        <View style={styles.smallSquare} />
-
-        <Text style={styles.welcomeText}>
-          Join Us.
-        </Text>
-
-        <Text style={styles.welcomeSub}>
-          Start Something New{"\n"}Today.
-        </Text>
-      </View>
+    <KeyboardAvoidingView
+      style={styles.page}
+      behavior={
+        Platform.OS === "ios"
+          ? "padding"
+          : undefined
+      }
+    >
 
       <ScrollView
-        style={styles.formBox}
-        contentContainerStyle={{ paddingBottom: 30 }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          flexGrow: 1,
+        }}
       >
-        <Text style={styles.formTitle}>
-          CREATE ACCOUNT
-        </Text>
 
-        <Text style={styles.formDescription}>
-          Enter your details to continue.
-        </Text>
+        <View style={styles.authTop}>
 
-        <Text style={styles.label}>Full Name</Text>
+          <Header
+            showBack
+            onBack={onBack}
+          />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Full Name"
-          placeholderTextColor="#777"
-        />
+          <View style={styles.authHero}>
 
-        <Text style={styles.label}>Email</Text>
+            <Text style={styles.authHeroTitle}>
+              Join Us.
+              {"\n"}
+              Start Something New.
+            </Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="username@email.com"
-          placeholderTextColor="#777"
-        />
+            <Tag text="EXPENSE MANAGEMENT, ITEMIZED" />
 
-        <Text style={styles.label}>Password</Text>
+          </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="••••••••"
-          placeholderTextColor="#777"
-          secureTextEntry
-        />
+        </View>
 
-        <TouchableOpacity
-          style={styles.greenButton}
-          onPress={() => go("setup")}
-        >
-          <Text style={styles.greenButtonText}>
-            Sign In
+        <View style={styles.authPanel}>
+
+          <Text style={styles.authTitle}>
+            CREATE ACCOUNT
           </Text>
-        </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => go("signin")}>
-          <Text style={styles.accountText}>
-            Already have an account? Sign In
+          <Text style={styles.authSubtitle}>
+            Take less than a minute.
           </Text>
-        </TouchableOpacity>
+
+          <Input
+            label="Full Name"
+            value={name}
+            onChangeText={setName}
+          />
+
+          <Input
+            label="Email"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+          />
+
+          <Input
+            label="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+
+          <PrimaryButton
+            title="Create Account"
+            onPress={createAccount}
+          />
+
+          <View style={styles.authFooter}>
+
+            <Text style={styles.footerText}>
+              Already have an Account?{" "}
+            </Text>
+
+            <TouchableOpacity onPress={onSignIn}>
+              <Text style={styles.greenText}>
+                Sign In
+              </Text>
+            </TouchableOpacity>
+
+          </View>
+
+        </View>
+
       </ScrollView>
-    </View>
+
+    </KeyboardAvoidingView>
   );
 }
 
 /* =========================================================
-   SETUP SCREEN
+   SIGN IN
 ========================================================= */
 
-function Setup({ go }) {
+function SignInScreen({
+  onBack,
+  onCreate,
+  onLogin,
+}) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const login = () => {
+
+    if (!email.trim()) {
+      Alert.alert(
+        "Missing Email",
+        "Please enter your email."
+      );
+      return;
+    }
+
+    if (!password) {
+      Alert.alert(
+        "Missing Password",
+        "Please enter your password."
+      );
+      return;
+    }
+
+    onLogin({
+      name:
+        email.split("@")[0] || "User",
+      email: email.trim(),
+    });
+  };
+
   return (
-    <View style={styles.setupScreen}>
-      <View style={styles.setupTop}>
-        <Header openMenu={() => {}} />
+    <KeyboardAvoidingView
+      style={styles.page}
+      behavior={
+        Platform.OS === "ios"
+          ? "padding"
+          : undefined
+      }
+    >
 
-        <View style={styles.setupTitleContainer}>
-          <Text style={styles.setupTitle}>
-            You’re In.
-          </Text>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          flexGrow: 1,
+        }}
+      >
 
-          <Text style={styles.setupTitle}>
-            Let’s Get You Set Up.
-          </Text>
+        <View style={styles.authTop}>
+
+          <Header
+            showBack
+            onBack={onBack}
+          />
+
+          <View style={styles.signinHero}>
+
+            <Text style={styles.authHeroTitle}>
+              Welcome Back.
+              {"\n"}
+              Good to See You Again.
+            </Text>
+
+            <Tag text="EXPENSE MANAGEMENT, ITEMIZED" />
+
+          </View>
+
         </View>
-      </View>
 
-      <View style={styles.setupBottom}>
-        <Text style={styles.setupWelcome}>
-          WELCOME, User
-        </Text>
+        <View style={styles.authPanel}>
 
-        <Text style={styles.setupDescription}>
-          Your account is ready. Here's a quick{"\n"}
-          look at what you can do first
-        </Text>
-
-        <TouchableOpacity style={styles.setupCard}>
-          <View style={styles.circleIcon}>
-            <Text style={styles.iconText}>♙</Text>
-          </View>
-
-          <View>
-            <Text style={styles.setupCardTitle}>
-              Complete your profile
-            </Text>
-
-            <Text style={styles.setupCardSub}>
-              Add Profile Photo
-            </Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.setupCard}>
-          <View style={styles.circleIcon}>
-            <Text style={styles.iconText}>⚙</Text>
-          </View>
-
-          <View>
-            <Text style={styles.setupCardTitle}>
-              Set Your Preferences
-            </Text>
-
-            <Text style={styles.setupCardSub}>
-              Tailor it to how you work
-            </Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.dashboardButton}
-          onPress={() => go("dashboard")}
-        >
-          <Text style={styles.dashboardButtonText}>
-            Go to Dashboard
+          <Text style={styles.authTitle}>
+            SIGN IN
           </Text>
-        </TouchableOpacity>
 
-        <View style={styles.homeIndicator} />
-      </View>
+          <Text style={styles.authSubtitle}>
+            Enter your details to continue.
+          </Text>
+
+          <Input
+            label="Email"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+          />
+
+          <Input
+            label="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+
+          <PrimaryButton
+            title="Sign In"
+            onPress={login}
+          />
+
+          <View style={styles.authFooter}>
+
+            <Text style={styles.footerText}>
+              New here?{" "}
+            </Text>
+
+            <TouchableOpacity onPress={onCreate}>
+              <Text style={styles.greenText}>
+                Create an Account
+              </Text>
+            </TouchableOpacity>
+
+          </View>
+
+        </View>
+
+      </ScrollView>
+
+    </KeyboardAvoidingView>
+  );
+}
+
+/* =========================================================
+   INPUT
+========================================================= */
+
+function Input({
+  label,
+  value,
+  onChangeText,
+  secureTextEntry,
+  keyboardType,
+}) {
+  return (
+    <View style={styles.inputContainer}>
+
+      <Text style={styles.inputLabel}>
+        {label}
+      </Text>
+
+      <TextInput
+        style={styles.input}
+        value={value}
+        onChangeText={onChangeText}
+        secureTextEntry={secureTextEntry}
+        keyboardType={keyboardType}
+        autoCapitalize="none"
+        autoCorrect={false}
+        placeholderTextColor="#55565D"
+      />
+
     </View>
   );
 }
@@ -360,99 +877,310 @@ function Setup({ go }) {
    DASHBOARD
 ========================================================= */
 
-function Dashboard({ go, openMenu }) {
+function DashboardScreen({
+  user,
+  expenses,
+  onNavigate,
+  onAddExpense,
+}) {
+  const [modalVisible, setModalVisible] =
+    useState(false);
+
+  const total = expenses.reduce(
+    (sum, expense) =>
+      sum + Number(expense.amount),
+    0
+  );
+
   return (
-    <View style={styles.dashboardScreen}>
-      <View style={styles.dashboardHeader}>
-        <Header openMenu={openMenu} />
+    <View style={styles.dashboardPage}>
 
-        <Text style={styles.dashboardWelcome}>
-          Welcome back,
-        </Text>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingBottom: 110,
+        }}
+      >
 
-        <Text style={styles.userName}>
-          User
-        </Text>
+        <View style={styles.dashboardHeader}>
 
-        <Text style={styles.balanceLabel}>
-          TOTAL BALANCE
-        </Text>
+          <View>
 
-        <Text style={styles.balance}>
-          ₱ 12,480
-          <Text style={styles.decimal}>.50</Text>
-        </Text>
-
-        <View style={styles.profileCircle}>
-          <Text style={styles.profileIcon}>●</Text>
-        </View>
-      </View>
-
-      <View style={styles.dashboardBody}>
-
-        {/* SCAN BUTTON */}
-        <TouchableOpacity
-          style={styles.scanButton}
-          onPress={() => go("records")}
-        >
-          <Text style={styles.scanArrow}>↑</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.scanText}>
-          Scan
-        </Text>
-
-        {/* SPENDING BREAKDOWN */}
-        <View style={styles.breakdownCard}>
-          <View style={styles.breakdownHeader}>
-            <Text style={styles.breakdownTitle}>
-              Spending Breakdown
+            <Text style={styles.welcomeSmall}>
+              Welcome Back,
             </Text>
 
-            <Text style={styles.monthText}>
-              This Month
+            <Text style={styles.dashboardUser}>
+              {user?.name || "User"}
             </Text>
+
           </View>
 
-          <View style={styles.chartRow}>
-            <View style={styles.donut}>
-              <View style={styles.donutInner}>
-                <Text style={styles.spentSmall}>
-                  SPENT
-                </Text>
+          <TouchableOpacity
+            onPress={() =>
+              onNavigate("profile")
+            }
+          >
 
-                <Text style={styles.spentAmount}>
-                  $1,240
-                </Text>
-              </View>
-            </View>
+            <Ionicons
+              name="person-circle-outline"
+              size={37}
+              color={COLORS.green}
+            />
 
-            <View style={styles.legend}>
-              <Legend color="#19A982" text="Shopping" />
-              <Legend color="#278FEA" text="Food & Dining" />
-              <Legend color="#FF9D00" text="Entertainment" />
-              <Legend color="#A746DC" text="Transport" />
-            </View>
-          </View>
+          </TouchableOpacity>
+
         </View>
-      </View>
+
+        <View style={styles.balanceCard}>
+
+          <Text style={styles.balanceLabel}>
+            TOTAL EXPENSES
+          </Text>
+
+          <Text style={styles.balanceAmount}>
+            ₱
+            {total.toLocaleString("en-PH", {
+              minimumFractionDigits: 2,
+            })}
+          </Text>
+
+          <Text style={styles.balanceHint}>
+            Your expenses are being tracked
+          </Text>
+
+        </View>
+
+        <View style={styles.quickActions}>
+
+          <QuickAction
+            icon="camera-outline"
+            title="Scan"
+            onPress={() =>
+              setModalVisible(true)
+            }
+          />
+
+          <QuickAction
+            icon="add-circle-outline"
+            title="Add"
+            onPress={() =>
+              setModalVisible(true)
+            }
+          />
+
+          <QuickAction
+            icon="wallet-outline"
+            title="Budget"
+            onPress={() =>
+              Alert.alert(
+                "Budget",
+                "Budget management will be available here."
+              )
+            }
+          />
+
+        </View>
+
+        <SectionTitle
+          title="Spending by Category"
+          action="This Month"
+        />
+
+        <SpendingChart
+          expenses={expenses}
+        />
+
+        <View style={styles.recentHeader}>
+
+          <Text style={styles.sectionTitle}>
+            Recent Transactions
+          </Text>
+
+          <TouchableOpacity
+            onPress={() =>
+              onNavigate("records")
+            }
+          >
+
+            <Text style={styles.viewAll}>
+              View All →
+            </Text>
+
+          </TouchableOpacity>
+
+        </View>
+
+        <View style={styles.recentContainer}>
+
+          {expenses
+            .slice(0, 3)
+            .map((expense) => (
+              <TransactionRow
+                key={expense.id}
+                expense={expense}
+              />
+            ))}
+
+        </View>
+
+      </ScrollView>
+
+      <BottomNavigation
+        active="dashboard"
+        onNavigate={onNavigate}
+      />
+
+      <AddExpenseModal
+        visible={modalVisible}
+        onClose={() =>
+          setModalVisible(false)
+        }
+        onAdd={(expense) => {
+          onAddExpense(expense);
+          setModalVisible(false);
+        }}
+      />
+
     </View>
   );
 }
 
-function Legend({ color, text }) {
+/* =========================================================
+   QUICK ACTION
+========================================================= */
+
+function QuickAction({
+  icon,
+  title,
+  onPress,
+}) {
   return (
-    <View style={styles.legendItem}>
-      <View
-        style={[
-          styles.legendDot,
-          { backgroundColor: color },
-        ]}
+    <TouchableOpacity
+      style={styles.quickAction}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+
+      <Ionicons
+        name={icon}
+        size={23}
+        color={COLORS.green}
       />
 
-      <Text style={styles.legendText}>
-        {text}
+      <Text style={styles.quickActionText}>
+        {title}
       </Text>
+
+    </TouchableOpacity>
+  );
+}
+
+/* =========================================================
+   SPENDING CHART
+========================================================= */
+
+function SpendingChart({
+  expenses,
+}) {
+  const categories = [
+    {
+      name: "Shopping",
+      color: COLORS.green,
+    },
+    {
+      name: "Food & Dining",
+      color: COLORS.blue,
+    },
+    {
+      name: "Entertainment",
+      color: COLORS.yellow,
+    },
+    {
+      name: "Transportation",
+      color: COLORS.red,
+    },
+  ];
+
+  const getTotal = (category) =>
+    expenses
+      .filter(
+        (item) =>
+          item.category === category
+      )
+      .reduce(
+        (sum, item) =>
+          sum + Number(item.amount),
+        0
+      );
+
+  const max = Math.max(
+    ...categories.map((x) =>
+      getTotal(x.name)
+    ),
+    100
+  );
+
+  return (
+    <View style={styles.chartCard}>
+
+      <View style={styles.chartHeader}>
+
+        <Text style={styles.chartTitle}>
+          Spending by Category
+        </Text>
+
+        <Text style={styles.chartMonth}>
+          This Month
+        </Text>
+
+      </View>
+
+      {categories.map((category) => {
+
+        const amount =
+          getTotal(category.name);
+
+        return (
+          <View
+            key={category.name}
+            style={styles.chartRow}
+          >
+
+            <View style={styles.chartLabelRow}>
+
+              <Text style={styles.chartCategory}>
+                {category.name}
+              </Text>
+
+              <Text style={styles.chartAmount}>
+                ₱{amount.toFixed(2)}
+              </Text>
+
+            </View>
+
+            <View style={styles.progressBackground}>
+
+              <View
+                style={[
+                  styles.progressBar,
+                  {
+                    width: `${Math.max(
+                      (amount / max) * 100,
+                      3
+                    )}%`,
+                    backgroundColor:
+                      category.color,
+                  },
+                ]}
+              />
+
+            </View>
+
+          </View>
+        );
+      })}
+
     </View>
   );
 }
@@ -461,92 +1189,209 @@ function Legend({ color, text }) {
    RECORDS
 ========================================================= */
 
-function Records({ go, openMenu }) {
+function RecordsScreen({
+  expenses,
+  onNavigate,
+  onAddExpense,
+}) {
+  const [search, setSearch] =
+    useState("");
+
+  const [modalVisible, setModalVisible] =
+    useState(false);
+
+  const filtered =
+    expenses.filter((expense) =>
+      `${expense.name} ${expense.category}`
+        .toLowerCase()
+        .includes(
+          search.toLowerCase()
+        )
+    );
+
   return (
-    <View style={styles.recordsScreen}>
-      <View style={styles.recordsHeader}>
-        <Header openMenu={openMenu} />
-      </View>
+    <View style={styles.dashboardPage}>
 
-      <View style={styles.recordsBody}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingBottom: 110,
+        }}
+      >
 
-        <TouchableOpacity
-          style={styles.recordsButton}
-          onPress={() => alert("Take Photo")}
-        >
-        <Text style={styles.uploadIcon}>
-            📷
-          </Text>
-
-          <Text style={styles.recordsButtonText}>
-            Take Photo
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.recordsButton}
-          onPress={() => alert("Upload Photo")}
-        >
-         <Text style={styles.uploadIcon}>
-            🖼
-          </Text>
-          
-          <Text style={styles.recordsButtonText}>
-            Upload Photo
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.recordsButton}
-          onPress={() => alert("Add Manual Receipt")}
-        >
-          <Text style={styles.recordsButtonText}>
-            Add Manual Receipt
-          </Text>
-        </TouchableOpacity>
-
-        <Text style={styles.recentTitle}>
-          Recent Uploads
+        <Text style={styles.recordsTitle}>
+          Records
         </Text>
 
-        <View style={styles.uploadHeader}>
-          <Text style={styles.uploadHeaderText}>
-            Picture
-          </Text>
+        <View style={styles.searchBox}>
 
-          <Text style={styles.uploadHeaderText}>
-            Transaction No.
-          </Text>
+          <Ionicons
+            name="search-outline"
+            size={19}
+            color={COLORS.gray}
+          />
 
-          <Text style={styles.uploadHeaderText}>
-            DATE
-          </Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search Records"
+            placeholderTextColor="#66676E"
+            value={search}
+            onChangeText={setSearch}
+          />
+
         </View>
 
-        <UploadRow number="001" date="08/09/26" />
-        <UploadRow number="002" date="08/08/26" />
-        <UploadRow number="003" date="08/07/26" />
-      </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filters}
+        >
+
+          {[
+            "All",
+            "Shopping",
+            "Food & Dining",
+            "Entertainment",
+            "Transportation",
+          ].map((filter, index) => (
+
+            <TouchableOpacity
+              key={filter}
+              style={[
+                styles.filterButton,
+                index === 0 &&
+                  styles.filterButtonActive,
+              ]}
+            >
+
+              <Text
+                style={[
+                  styles.filterText,
+                  index === 0 &&
+                    styles.filterTextActive,
+                ]}
+              >
+                {filter}
+              </Text>
+
+            </TouchableOpacity>
+
+          ))}
+
+        </ScrollView>
+
+        <Text style={styles.dateHeading}>
+          RECENT
+        </Text>
+
+        {filtered.map((expense) => (
+          <View
+            key={expense.id}
+            style={{
+              marginHorizontal: 20,
+            }}
+          >
+
+            <TransactionRow
+              expense={expense}
+            />
+
+          </View>
+        ))}
+
+        {filtered.length === 0 && (
+          <Text style={styles.emptyText}>
+            No records found.
+          </Text>
+        )}
+
+      </ScrollView>
+
+      <TouchableOpacity
+        style={styles.floatingButton}
+        onPress={() =>
+          setModalVisible(true)
+        }
+      >
+
+        <Ionicons
+          name="add"
+          size={28}
+          color={COLORS.black}
+        />
+
+      </TouchableOpacity>
+
+      <BottomNavigation
+        active="records"
+        onNavigate={onNavigate}
+      />
+
+      <AddExpenseModal
+        visible={modalVisible}
+        onClose={() =>
+          setModalVisible(false)
+        }
+        onAdd={(expense) => {
+          onAddExpense(expense);
+          setModalVisible(false);
+        }}
+      />
+
     </View>
   );
 }
 
-function UploadRow({ number, date }) {
+/* =========================================================
+   TRANSACTION
+========================================================= */
+
+function TransactionRow({
+  expense,
+}) {
+  const iconMap = {
+    Shopping: "cart-outline",
+    "Food & Dining":
+      "restaurant-outline",
+    Entertainment:
+      "game-controller-outline",
+    Transportation:
+      "car-outline",
+  };
+
   return (
-    <View style={styles.uploadRow}>
-      <View style={styles.pictureBox}>
-        <Text style={styles.pictureText}>
-          Picture
-        </Text>
+    <View style={styles.transaction}>
+
+      <View style={styles.transactionIcon}>
+
+        <Ionicons
+          name={
+            iconMap[expense.category] ||
+            "receipt-outline"
+          }
+          size={21}
+          color={COLORS.green}
+        />
+
       </View>
 
-      <Text style={styles.transactionText}>
-        {number}
+      <View style={styles.transactionInfo}>
+
+        <Text style={styles.transactionName}>
+          {expense.name}
+        </Text>
+
+        <Text style={styles.transactionCategory}>
+          {expense.category}
+        </Text>
+
+      </View>
+
+      <Text style={styles.transactionAmount}>
+        ₱
+        {Number(expense.amount).toFixed(2)}
       </Text>
 
-      <Text style={styles.dateText}>
-        {date}
-      </Text>
     </View>
   );
 }
@@ -555,149 +1400,885 @@ function UploadRow({ number, date }) {
    PROFILE
 ========================================================= */
 
-function Profile({ go, openMenu }) {
-  return (
-    <View style={styles.profileScreen}>
-      <View style={styles.profileHeader}>
-        <Header openMenu={openMenu} />
-      </View>
+function ProfileScreen({
+  user,
+  onNavigate,
+  onLogout,
+}) {
+  const handleLogout = () => {
 
-      <View style={styles.profileBody}>
-        <View style={styles.bigProfileCircle}>
-          <Text style={styles.bigProfileIcon}>
-            ●
-          </Text>
+    Alert.alert(
+      "Log Out",
+      "Are you sure you want to log out?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Log Out",
+          style: "destructive",
+
+          onPress: () => {
+            onLogout();
+          },
+        },
+      ]
+    );
+  };
+
+  return (
+    <View style={styles.dashboardPage}>
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingBottom: 120,
+        }}
+      >
+
+        <Text style={styles.profileTitle}>
+          Profile
+        </Text>
+
+        <View style={styles.profileAvatar}>
+
+          <Ionicons
+            name="person-outline"
+            size={50}
+            color={COLORS.green}
+          />
+
         </View>
 
         <Text style={styles.profileName}>
-          User
+          {user?.name || "User"}
         </Text>
 
         <Text style={styles.profileEmail}>
-          username@email.com
+          {user?.email ||
+            "username@email.com"}
         </Text>
 
-        <TouchableOpacity style={styles.profileButton}>
-          <Text>Edit Profile</Text>
-        </TouchableOpacity>
+        <View style={styles.statsRow}>
 
-        <TouchableOpacity style={styles.profileButton}>
-          <Text>Preferences</Text>
-        </TouchableOpacity>
+          <Stat
+            label="RECEIPTS"
+            value="142"
+          />
 
-        <TouchableOpacity style={styles.profileButton}>
-          <Text>Security</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-}
+          <Stat
+            label="TOTAL SPENT"
+            value="₱22,340"
+          />
 
-/* =========================================================
-   REPORT
-========================================================= */
+          <Stat
+            label="DAYS ACTIVE"
+            value="18"
+          />
 
-function Report({ openMenu }) {
-  return (
-    <View style={styles.reportScreen}>
-      <View style={styles.reportHeader}>
-        <Header openMenu={openMenu} />
-      </View>
+        </View>
 
-      <View style={styles.reportBody}>
-        <Text style={styles.reportTitle}>
-          Spending Report
+        <Text style={styles.profileSection}>
+          ACCOUNT
         </Text>
 
-        <View style={styles.reportCard}>
-          <Text style={styles.reportCardTitle}>
-            Monthly Spending
-          </Text>
+        <View style={styles.profileMenu}>
 
-          <Text style={styles.reportAmount}>
-            ₱1,240
-          </Text>
+          <ProfileOption
+            icon="create-outline"
+            title="Edit Profile"
+          />
 
-          <Text style={styles.reportDescription}>
-            Your spending summary for this month.
-          </Text>
-        </View>
-      </View>
-    </View>
-  );
-}
+          <ProfileOption
+            icon="options-outline"
+            title="Preferences"
+          />
 
-/* =========================================================
-   SIDE MENU
-========================================================= */
+          <ProfileOption
+            icon="shield-checkmark-outline"
+            title="Security"
+          />
 
-function SideMenu({ go, closeMenu }) {
-  return (
-    <View style={styles.menuOverlay}>
-
-      <TouchableOpacity
-        style={styles.menuBackground}
-        onPress={closeMenu}
-      />
-
-      <View style={styles.sideMenu}>
-
-        <View style={styles.sideMenuTop}>
-          <Text
-            style={styles.closeMenu}
-            onPress={closeMenu}
-          >
-            ×
-          </Text>
         </View>
 
-        <TouchableOpacity
-          style={styles.menuButton}
-          onPress={() => go("dashboard")}
-        >
-          <Text style={styles.menuButtonText}>
-            Dashboard
-          </Text>
-        </TouchableOpacity>
+        <Text style={styles.profileSection}>
+          SUPPORT
+        </Text>
 
-        <TouchableOpacity
-          style={styles.menuButton}
-          onPress={() => go("records")}
-        >
-          <Text style={styles.menuButtonText}>
-            Records
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.profileMenu}>
 
-        <TouchableOpacity
-          style={styles.menuButton}
-          onPress={() => go("report")}
-        >
-          <Text style={styles.menuButtonText}>
-            Report
-          </Text>
-        </TouchableOpacity>
+          <ProfileOption
+            icon="help-circle-outline"
+            title="Help & Support"
+          />
 
-        <TouchableOpacity
-          style={styles.menuButton}
-          onPress={() => go("profile")}
-        >
-          <Text style={styles.menuButtonText}>
-            Profile
-          </Text>
-        </TouchableOpacity>
+        </View>
 
-        <View style={{ flex: 1 }} />
+        {/* FIXED LOGOUT BUTTON */}
 
         <TouchableOpacity
           style={styles.logoutButton}
-          onPress={() => go("signin")}
+          activeOpacity={0.7}
+          onPress={handleLogout}
         >
-          <Text style={styles.menuButtonText}>
-            Log out
+
+          <Ionicons
+            name="log-out-outline"
+            size={20}
+            color={COLORS.red}
+          />
+
+          <Text style={styles.logoutText}>
+            Log Out
           </Text>
+
         </TouchableOpacity>
+
+      </ScrollView>
+
+      <BottomNavigation
+        active="profile"
+        onNavigate={onNavigate}
+      />
+
+    </View>
+  );
+}
+
+/* =========================================================
+   PROFILE STAT
+========================================================= */
+
+function Stat({
+  label,
+  value,
+}) {
+  return (
+    <View style={styles.statBox}>
+
+      <Text style={styles.statValue}>
+        {value}
+      </Text>
+
+      <Text style={styles.statLabel}>
+        {label}
+      </Text>
+
+    </View>
+  );
+}
+
+/* =========================================================
+   PROFILE OPTION
+========================================================= */
+
+function ProfileOption({
+  icon,
+  title,
+}) {
+  return (
+    <TouchableOpacity
+      style={styles.profileOption}
+      onPress={() =>
+        Alert.alert(
+          title,
+          `${title} settings will be available here.`
+        )
+      }
+    >
+
+      <View style={styles.profileOptionLeft}>
+
+        <Ionicons
+          name={icon}
+          size={20}
+          color={COLORS.lightGray}
+        />
+
+        <Text style={styles.profileOptionText}>
+          {title}
+        </Text>
+
       </View>
+
+      <Ionicons
+        name="chevron-forward"
+        size={19}
+        color={COLORS.gray}
+      />
+
+    </TouchableOpacity>
+  );
+}
+
+/* =========================================================
+   BOTTOM NAVIGATION
+========================================================= */
+
+function BottomNavigation({
+  active,
+  onNavigate,
+}) {
+  return (
+    <View style={styles.bottomNav}>
+
+      <NavItem
+        icon="home-outline"
+        activeIcon="home"
+        active={
+          active === "dashboard"
+        }
+        onPress={() =>
+          onNavigate("dashboard")
+        }
+      />
+
+      <NavItem
+        icon="list-outline"
+        activeIcon="list"
+        active={
+          active === "records"
+        }
+        onPress={() =>
+          onNavigate("records")
+        }
+      />
+
+      <NavItem
+        icon="person-outline"
+        activeIcon="person"
+        active={
+          active === "profile"
+        }
+        onPress={() =>
+          onNavigate("profile")
+        }
+      />
+
+    </View>
+  );
+}
+
+function NavItem({
+  icon,
+  activeIcon,
+  active,
+  onPress,
+}) {
+  return (
+    <TouchableOpacity
+      style={styles.navItem}
+      onPress={onPress}
+    >
+
+      <Ionicons
+        name={
+          active
+            ? activeIcon
+            : icon
+        }
+        size={24}
+        color={
+          active
+            ? COLORS.green
+            : COLORS.gray
+        }
+      />
+
+    </TouchableOpacity>
+  );
+}
+
+/* =========================================================
+   MOBILE MENU
+========================================================= */
+
+function MobileMenu({
+  visible,
+  onClose,
+  onNavigate,
+}) {
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent={false}
+      onRequestClose={onClose}
+    >
+
+      <SafeAreaView
+        style={styles.menuScreen}
+      >
+
+        <View style={styles.menuHeader}>
+
+          <Text style={styles.logo}>
+            RECEIPT
+            <Text style={styles.logoGreen}>
+              IQ
+            </Text>
+          </Text>
+
+          <TouchableOpacity
+            onPress={onClose}
+          >
+
+            <Ionicons
+              name="close"
+              size={34}
+              color={COLORS.white}
+            />
+
+          </TouchableOpacity>
+
+        </View>
+
+        <View style={styles.menuDivider} />
+
+        <MenuItem
+          title="Features"
+          onPress={() =>
+            Alert.alert(
+              "Features",
+              "Receipt scanning, expense categorization, reports, search and spending analysis."
+            )
+          }
+        />
+
+        <MenuItem
+          title="Pricing"
+          onPress={() =>
+            Alert.alert(
+              "Pricing",
+              "ReceiptIQ is currently free during development."
+            )
+          }
+        />
+
+        <MenuItem
+          title="Customers"
+          onPress={() =>
+            Alert.alert(
+              "Customers",
+              "Built for students, employees, families and small businesses."
+            )
+          }
+        />
+
+        <MenuItem
+          title="About"
+          onPress={() =>
+            Alert.alert(
+              "About ReceiptIQ",
+              "ReceiptIQ helps users capture, organize and understand their expenses."
+            )
+          }
+        />
+
+        <View style={styles.menuBottom}>
+
+          <Tag text="EXPENSE MANAGEMENT, ITEMIZED" />
+
+          <PrimaryButton
+            title="Get Started Free"
+            onPress={() =>
+              onNavigate("create")
+            }
+          />
+
+          <TouchableOpacity
+            style={styles.signInBottom}
+            onPress={() =>
+              onNavigate("signin")
+            }
+          >
+
+            <Text style={styles.signInText}>
+              Sign In
+            </Text>
+
+          </TouchableOpacity>
+
+        </View>
+
+      </SafeAreaView>
+
+    </Modal>
+  );
+}
+
+function MenuItem({
+  title,
+  onPress,
+}) {
+  return (
+    <TouchableOpacity
+      style={styles.menuItem}
+      onPress={onPress}
+    >
+
+      <Text style={styles.menuItemText}>
+        {title}
+      </Text>
+
+      <Ionicons
+        name="chevron-forward"
+        size={23}
+        color={COLORS.lightGray}
+      />
+
+    </TouchableOpacity>
+  );
+}
+
+/* =========================================================
+   ADD EXPENSE MODAL
+========================================================= */
+
+function AddExpenseModal({
+  visible,
+  onClose,
+  onAdd,
+}) {
+  const [store, setStore] =
+    useState("");
+
+  const [amount, setAmount] =
+    useState("");
+
+  const [category, setCategory] =
+    useState("Shopping");
+
+  const [receiptImage, setReceiptImage] =
+    useState(null);
+
+  /* =======================================================
+     TAKE PHOTO
+  ======================================================= */
+
+  const takePhoto = async () => {
+
+    try {
+
+      const permission =
+        await ImagePicker.requestCameraPermissionsAsync();
+
+      if (!permission.granted) {
+
+        Alert.alert(
+          "Camera Permission",
+          "Please allow camera access in your iPhone Settings."
+        );
+
+        return;
+      }
+
+      const result =
+        await ImagePicker.launchCameraAsync({
+          mediaTypes:
+            ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [4, 3],
+          quality: 0.8,
+        });
+
+      if (!result.canceled) {
+
+        setReceiptImage(
+          result.assets[0].uri
+        );
+
+      }
+
+    } catch (error) {
+
+      console.log(
+        "Camera error:",
+        error
+      );
+
+      Alert.alert(
+        "Camera Error",
+        "Unable to open the camera."
+      );
+    }
+  };
+
+  /* =======================================================
+     PHOTO LIBRARY
+  ======================================================= */
+
+  const chooseFromLibrary =
+    async () => {
+
+      try {
+
+        const permission =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+        if (!permission.granted) {
+
+          Alert.alert(
+            "Photo Permission",
+            "Please allow photo access in your iPhone Settings."
+          );
+
+          return;
+        }
+
+        const result =
+          await ImagePicker.launchImageLibraryAsync({
+            mediaTypes:
+              ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [4, 3],
+            quality: 0.8,
+          });
+
+        if (!result.canceled) {
+
+          setReceiptImage(
+            result.assets[0].uri
+          );
+
+        }
+
+      } catch (error) {
+
+        console.log(
+          "Photo library error:",
+          error
+        );
+
+        Alert.alert(
+          "Photo Error",
+          "Unable to open your photo library."
+        );
+      }
+    };
+
+  /* =======================================================
+     PHOTO OPTIONS
+  ======================================================= */
+
+  const showPhotoOptions =
+    () => {
+
+      Alert.alert(
+        "Receipt Photo",
+        "Choose an option",
+        [
+          {
+            text: "Take Photo",
+            onPress: takePhoto,
+          },
+          {
+            text: "Choose from Photos",
+            onPress:
+              chooseFromLibrary,
+          },
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+        ]
+      );
+    };
+
+  /* =======================================================
+     SAVE EXPENSE
+  ======================================================= */
+
+  const submit = () => {
+
+    if (!store.trim()) {
+
+      Alert.alert(
+        "Missing Information",
+        "Enter the store or description."
+      );
+
+      return;
+    }
+
+    if (!amount.trim()) {
+
+      Alert.alert(
+        "Missing Amount",
+        "Enter the expense amount."
+      );
+
+      return;
+    }
+
+    const numericAmount =
+      Number(
+        amount.replace(/,/g, "")
+      );
+
+    if (
+      Number.isNaN(numericAmount) ||
+      numericAmount <= 0
+    ) {
+
+      Alert.alert(
+        "Invalid Amount",
+        "Please enter a valid amount."
+      );
+
+      return;
+    }
+
+    onAdd({
+      name: store.trim(),
+      amount: numericAmount,
+      category,
+      image: receiptImage,
+    });
+
+    setStore("");
+    setAmount("");
+    setCategory("Shopping");
+    setReceiptImage(null);
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+
+      <KeyboardAvoidingView
+        style={styles.modalOverlay}
+        behavior={
+          Platform.OS === "ios"
+            ? "padding"
+            : undefined
+        }
+      >
+
+        <View style={styles.modalCard}>
+
+          <View style={styles.modalHeader}>
+
+            <Text style={styles.modalTitle}>
+              Add Expense
+            </Text>
+
+            <TouchableOpacity
+              onPress={onClose}
+            >
+
+              <Ionicons
+                name="close"
+                size={27}
+                color={COLORS.white}
+              />
+
+            </TouchableOpacity>
+
+          </View>
+
+          {/* RECEIPT IMAGE */}
+
+          {receiptImage && (
+            <View
+              style={
+                styles.receiptImageContainer
+              }
+            >
+
+              <Image
+                source={{
+                  uri: receiptImage,
+                }}
+                style={styles.receiptImage}
+              />
+
+              <TouchableOpacity
+                style={styles.removePhoto}
+                onPress={() =>
+                  setReceiptImage(null)
+                }
+              >
+
+                <Ionicons
+                  name="close"
+                  size={17}
+                  color={COLORS.white}
+                />
+
+              </TouchableOpacity>
+
+            </View>
+          )}
+
+          <Text style={styles.modalLabel}>
+            Store / Description
+          </Text>
+
+          <TextInput
+            style={styles.modalInput}
+            value={store}
+            onChangeText={setStore}
+            placeholder="e.g. Jollibee"
+            placeholderTextColor="#66676E"
+          />
+
+          <Text style={styles.modalLabel}>
+            Amount
+          </Text>
+
+          <TextInput
+            style={styles.modalInput}
+            value={amount}
+            onChangeText={setAmount}
+            placeholder="e.g. 250"
+            placeholderTextColor="#66676E"
+            keyboardType="decimal-pad"
+          />
+
+          <Text style={styles.modalLabel}>
+            Category
+          </Text>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{
+              marginBottom: 18,
+            }}
+          >
+
+            {[
+              "Shopping",
+              "Food & Dining",
+              "Entertainment",
+              "Transportation",
+            ].map((item) => (
+
+              <TouchableOpacity
+                key={item}
+                style={[
+                  styles.categoryButton,
+                  category === item &&
+                    styles.categoryButtonActive,
+                ]}
+                onPress={() =>
+                  setCategory(item)
+                }
+              >
+
+                <Text
+                  style={[
+                    styles.categoryButtonText,
+                    category === item &&
+                      styles.categoryButtonTextActive,
+                  ]}
+                >
+                  {item}
+                </Text>
+
+              </TouchableOpacity>
+
+            ))}
+
+          </ScrollView>
+
+          {/* CAMERA BUTTON */}
+
+          <TouchableOpacity
+            style={styles.scanPhotoButton}
+            onPress={showPhotoOptions}
+          >
+
+            <Ionicons
+              name="camera-outline"
+              size={20}
+              color={COLORS.green}
+            />
+
+            <Text style={styles.scanPhotoText}>
+              {receiptImage
+                ? "Change Receipt Photo"
+                : "Scan / Take Photo"}
+            </Text>
+
+          </TouchableOpacity>
+
+          <PrimaryButton
+            title="Save Expense"
+            onPress={submit}
+          />
+
+        </View>
+
+      </KeyboardAvoidingView>
+
+    </Modal>
+  );
+}
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+function PrimaryButton({
+  title,
+  onPress,
+}) {
+  return (
+    <TouchableOpacity
+      style={styles.primaryButton}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+
+      <Text style={styles.primaryButtonText}>
+        {title}
+      </Text>
+
+    </TouchableOpacity>
+  );
+}
+
+function SecondaryButton({
+  title,
+  onPress,
+}) {
+  return (
+    <TouchableOpacity
+      style={styles.secondaryButton}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+
+      <Text style={styles.secondaryButtonText}>
+        {title}
+      </Text>
+
+    </TouchableOpacity>
+  );
+}
+
+function SectionTitle({
+  title,
+  action,
+}) {
+  return (
+    <View style={styles.sectionHeader}>
+
+      <Text style={styles.sectionTitle}>
+        {title}
+      </Text>
+
+      <Text style={styles.sectionAction}>
+        {action}
+      </Text>
+
     </View>
   );
 }
@@ -707,648 +2288,954 @@ function SideMenu({ go, closeMenu }) {
 ========================================================= */
 
 const styles = StyleSheet.create({
+
   safeArea: {
     flex: 1,
-    backgroundColor: NAVY,
+    backgroundColor: COLORS.black,
   },
 
-  screen: {
+  container: {
     flex: 1,
+    backgroundColor: COLORS.black,
   },
 
-  fullDark: {
+  page: {
     flex: 1,
-    backgroundColor: NAVY,
+    backgroundColor: COLORS.black,
   },
+
+  /* HEADER */
 
   header: {
-    height: 65,
-    paddingHorizontal: 22,
+    height: 72,
+    paddingHorizontal: 25,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
 
-  menuIcon: {
-    color: WHITE,
-    fontSize: 28,
-    fontWeight: "300",
+  headerIcon: {
+    width: 35,
+    height: 35,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
-  statusRight: {
-    position: "absolute",
-    right: 20,
-    top: 25,
+  logo: {
+    fontSize: 15,
+    color: COLORS.white,
+    letterSpacing: 1,
+    fontWeight: "500",
   },
 
-  statusText: {
-    color: WHITE,
-    fontSize: 10,
+  logoGreen: {
+    color: COLORS.green,
   },
 
-  topWelcome: {
-    paddingHorizontal: 30,
-    paddingTop: 55,
+  /* TAG */
+
+  tag: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 25,
+  },
+
+  diamond: {
+    width: 12,
+    height: 12,
+    borderWidth: 1.3,
+    borderColor: COLORS.green,
+    transform: [
+      {
+        rotate: "45deg",
+      },
+    ],
+    marginRight: 10,
+  },
+
+  tagText: {
+    color: COLORS.green,
+    fontSize: 8,
+    letterSpacing: 1,
+    fontWeight: "500",
+  },
+
+  /* LANDING */
+
+  landingContent: {
+    paddingHorizontal: 25,
+    paddingTop: 45,
+    paddingBottom: 40,
+  },
+
+  heroTitle: {
+    color: COLORS.white,
+    fontSize: 25,
+    lineHeight: 30,
+    fontWeight: "700",
+    marginBottom: 12,
+  },
+
+  heroDescription: {
+    color: "#73747B",
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 30,
+  },
+
+  primaryButton: {
+    height: 45,
+    borderRadius: 23,
+    backgroundColor: COLORS.green,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 9,
+  },
+
+  primaryButtonText: {
+    color: "#07120F",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+
+  secondaryButton: {
+    height: 45,
+    borderRadius: 23,
+    borderWidth: 1.5,
+    borderColor: "#74747A",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 15,
+  },
+
+  secondaryButtonText: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+
+  signInBottom: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 8,
+  },
+
+  signInText: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+
+  footerText: {
+    color: COLORS.white,
+    fontSize: 9,
+  },
+
+  greenText: {
+    color: COLORS.green,
+    fontSize: 9,
+    fontWeight: "600",
+  },
+
+  /* RECEIPT */
+
+  receiptWrapper: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 20,
+  },
+
+  receipt: {
+    width: 200,
+    minHeight: 300,
+    backgroundColor: "#F5F5F5",
+    padding: 15,
+    transform: [
+      {
+        rotate: "6deg",
+      },
+    ],
+    elevation: 8,
+  },
+
+  receiptTitle: {
+    color: "#222",
+    textAlign: "center",
+    fontSize: 9,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+
+  receiptNumber: {
+    color: "#222",
+    fontSize: 8,
+    textAlign: "center",
+    marginVertical: 5,
+  },
+
+  receiptLine: {
+    borderTopWidth: 1,
+    borderColor: "#777",
+    borderStyle: "dashed",
+    marginVertical: 7,
+  },
+
+  receiptRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+
+  receiptText: {
+    color: "#222",
+    fontSize: 8,
+  },
+
+  receiptDate: {
+    color: "#222",
+    fontSize: 7,
+    marginTop: 12,
+    textAlign: "center",
+  },
+
+  /* HOW */
+
+  howContent: {
+    paddingHorizontal: 25,
+    paddingTop: 25,
+    paddingBottom: 35,
+  },
+
+  howTitle: {
+    color: COLORS.white,
+    fontSize: 22,
+    lineHeight: 25,
+    fontWeight: "700",
+    marginBottom: 12,
+  },
+
+  stepCard: {
+    backgroundColor: COLORS.card,
+    minHeight: 87,
+    borderRadius: 17,
+    marginBottom: 10,
+    padding: 13,
+    flexDirection: "row",
+  },
+
+  stepIcon: {
+    width: 45,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  stepContent: {
     flex: 1,
+    paddingLeft: 5,
   },
 
-  smallSquare: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    backgroundColor: "#222245",
-    marginBottom: 20,
+  stepNumber: {
+    color: COLORS.green,
+    fontSize: 8,
+    letterSpacing: 1,
+    marginBottom: 3,
   },
 
-  welcomeText: {
-    color: WHITE,
-    fontSize: 20,
-  },
-
-  welcomeSub: {
-    color: WHITE,
-    fontSize: 18,
-    marginTop: 3,
-    lineHeight: 22,
-  },
-
-  formBox: {
-    backgroundColor: DARK,
-    paddingHorizontal: 24,
-    paddingTop: 18,
-    minHeight: 360,
-  },
-
-  formTitle: {
-    color: WHITE,
-    textAlign: "center",
-    fontSize: 19,
-    fontWeight: "bold",
-    fontFamily: "serif",
-  },
-
-  formDescription: {
-    color: "#777",
-    textAlign: "center",
-    fontSize: 9,
-    marginTop: 5,
-    marginBottom: 22,
-  },
-
-  label: {
-    color: WHITE,
-    fontSize: 9,
+  stepTitle: {
+    color: COLORS.white,
+    fontSize: 11,
+    fontWeight: "700",
     marginBottom: 5,
   },
 
-  input: {
-    height: 36,
-    borderBottomWidth: 1,
-    borderBottomColor: "#777",
-    color: WHITE,
-    marginBottom: 15,
-    fontSize: 12,
-  },
-
-  greenButton: {
-    backgroundColor: GREEN,
-    height: 38,
-    borderRadius: 5,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 5,
-  },
-
-  greenButtonText: {
-    color: NAVY,
-    fontSize: 12,
-  },
-
-  accountText: {
-    color: WHITE,
-    textAlign: "center",
+  stepDescription: {
+    color: "#777880",
     fontSize: 8,
-    marginTop: 12,
+    lineHeight: 11,
   },
 
-  /* SETUP */
+  /* AUTH */
 
-  setupScreen: {
-    flex: 1,
-    backgroundColor: DARK,
+  authTop: {
+    backgroundColor: COLORS.black,
+    minHeight: 310,
   },
 
-  setupTop: {
-    height: "45%",
-    backgroundColor: NAVY,
+  authHero: {
+    paddingHorizontal: 36,
+    paddingTop: 40,
   },
 
-  setupTitleContainer: {
-    paddingHorizontal: 32,
-    marginTop: 75,
+  signinHero: {
+    paddingHorizontal: 36,
+    paddingTop: 45,
   },
 
-  setupTitle: {
-    color: WHITE,
-    fontSize: 27,
-    lineHeight: 36,
-  },
-
-  setupBottom: {
-    flex: 1,
-    backgroundColor: DARK,
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
-    alignItems: "center",
-    paddingTop: 30,
-    paddingHorizontal: 25,
-  },
-
-  setupWelcome: {
-    color: WHITE,
-    fontSize: 24,
-    fontWeight: "bold",
-    fontFamily: "serif",
-  },
-
-  setupDescription: {
-    color: "#777",
-    fontSize: 13,
-    textAlign: "center",
-    marginTop: 8,
-    marginBottom: 30,
-    lineHeight: 20,
-  },
-
-  setupCard: {
-    width: "90%",
-    height: 72,
-    backgroundColor: NAVY,
-    borderRadius: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 15,
+  authHeroTitle: {
+    color: COLORS.white,
+    fontSize: 20,
+    lineHeight: 25,
+    fontWeight: "700",
     marginBottom: 18,
   },
 
-  circleIcon: {
-    width: 45,
-    height: 45,
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: WHITE,
-    alignItems: "center",
+  authPanel: {
+    flex: 1,
+    backgroundColor: COLORS.card,
+    paddingHorizontal: 36,
+    paddingTop: 35,
+    minHeight: 390,
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+  },
+
+  authTitle: {
+    color: COLORS.white,
+    fontSize: 17,
+    fontWeight: "800",
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+
+  authSubtitle: {
+    color: "#777880",
+    fontSize: 9,
+    marginBottom: 27,
+  },
+
+  inputContainer: {
+    marginBottom: 18,
+  },
+
+  inputLabel: {
+    color: COLORS.lightGray,
+    fontSize: 9,
+    marginBottom: 7,
+  },
+
+  input: {
+    height: 40,
+    borderBottomWidth: 1,
+    borderBottomColor: "#777880",
+    color: COLORS.white,
+    fontSize: 13,
+    paddingVertical: 0,
+  },
+
+  authFooter: {
+    flexDirection: "row",
     justifyContent: "center",
-    marginRight: 15,
-  },
-
-  iconText: {
-    color: WHITE,
-    fontSize: 24,
-  },
-
-  setupCardTitle: {
-    color: WHITE,
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-
-  setupCardSub: {
-    color: "#999",
-    fontSize: 12,
-    marginTop: 3,
-  },
-
-  dashboardButton: {
-    width: "90%",
-    height: 48,
-    backgroundColor: GREEN,
-    borderRadius: 6,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 18,
-  },
-
-  dashboardButtonText: {
-    color: NAVY,
-    fontSize: 16,
-  },
-
-  homeIndicator: {
-    width: 130,
-    height: 4,
-    backgroundColor: WHITE,
-    borderRadius: 5,
-    position: "absolute",
-    bottom: 10,
+    marginTop: 5,
   },
 
   /* DASHBOARD */
 
-  dashboardScreen: {
+  dashboardPage: {
     flex: 1,
-    backgroundColor: "#E7E7E7",
+    backgroundColor: COLORS.navy,
   },
 
   dashboardHeader: {
-    height: 250,
-    backgroundColor: NAVY,
-    borderBottomLeftRadius: 18,
-    borderBottomRightRadius: 18,
-    paddingHorizontal: 25,
+    paddingHorizontal: 20,
+    paddingTop: 25,
+    paddingBottom: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
 
-  dashboardWelcome: {
-    color: "#B7B5D0",
-    fontSize: 12,
-    marginTop: 8,
+  welcomeSmall: {
+    color: COLORS.lightGray,
+    fontSize: 9,
+    marginBottom: 4,
   },
 
-  userName: {
-    color: WHITE,
-    fontSize: 21,
-    fontWeight: "bold",
+  dashboardUser: {
+    color: COLORS.white,
+    fontSize: 19,
+    fontWeight: "700",
+  },
+
+  balanceCard: {
+    backgroundColor: COLORS.card,
+    marginHorizontal: 20,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 10,
   },
 
   balanceLabel: {
-    color: "#A6A4C0",
-    fontSize: 10,
-    marginTop: 20,
+    color: "#777880",
+    fontSize: 7,
+    letterSpacing: 1,
   },
 
-  balance: {
-    color: WHITE,
-    fontSize: 32,
-    fontWeight: "bold",
-  },
-
-  decimal: {
-    color: "#AAA9C9",
-    fontSize: 16,
-  },
-
-  profileCircle: {
-    position: "absolute",
-    right: 28,
-    top: 70,
-    width: 45,
-    height: 45,
-    borderRadius: 25,
-    backgroundColor: "#DDD",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  profileIcon: {
-    color: "#888",
+  balanceAmount: {
+    color: COLORS.white,
     fontSize: 25,
+    fontWeight: "800",
+    marginTop: 5,
   },
 
-  dashboardBody: {
+  balanceHint: {
+    color: COLORS.green,
+    fontSize: 7,
+    marginTop: 5,
+  },
+
+  quickActions: {
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    marginBottom: 22,
+  },
+
+  quickAction: {
     flex: 1,
-    alignItems: "center",
-    paddingTop: 8,
-  },
-
-  scanButton: {
-    width: 52,
-    height: 52,
-    borderRadius: 30,
-    backgroundColor: NAVY,
+    height: 55,
+    backgroundColor: COLORS.card,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 0,
+    marginHorizontal: 4,
   },
 
-  scanArrow: {
-    color: WHITE,
-    fontSize: 25,
+  quickActionText: {
+    color: COLORS.lightGray,
+    fontSize: 8,
+    marginTop: 4,
   },
 
-  scanText: {
-    color: "#111",
-    fontSize: 10,
-    marginTop: 2,
-    marginBottom: 25,
-  },
-
-  breakdownCard: {
-    width: "82%",
-    backgroundColor: WHITE,
-    borderRadius: 16,
-    padding: 18,
-    elevation: 4,
-  },
-
-  breakdownHeader: {
+  sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
+    paddingHorizontal: 20,
+    marginBottom: 9,
   },
 
-  breakdownTitle: {
-    color: "#111",
-    fontSize: 15,
-    fontWeight: "bold",
+  sectionTitle: {
+    color: COLORS.white,
+    fontSize: 11,
+    fontWeight: "700",
   },
 
-  monthText: {
-    color: "#111",
-    fontSize: 12,
+  sectionAction: {
+    color: COLORS.green,
+    fontSize: 7,
+  },
+
+  /* CHART */
+
+  chartCard: {
+    backgroundColor: COLORS.card,
+    marginHorizontal: 20,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 22,
+  },
+
+  chartHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+
+  chartTitle: {
+    color: COLORS.white,
+    fontSize: 9,
+    fontWeight: "600",
+  },
+
+  chartMonth: {
+    color: COLORS.green,
+    fontSize: 7,
   },
 
   chartRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 20,
+    marginBottom: 9,
   },
 
-  donut: {
-    width: 115,
-    height: 115,
-    borderRadius: 60,
-    borderWidth: 20,
-    borderTopColor: "#19A982",
-    borderRightColor: "#278FEA",
-    borderBottomColor: "#FF9D00",
-    borderLeftColor: "#A746DC",
+  chartLabelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+
+  chartCategory: {
+    color: COLORS.lightGray,
+    fontSize: 7,
+  },
+
+  chartAmount: {
+    color: "#888990",
+    fontSize: 7,
+  },
+
+  progressBackground: {
+    height: 4,
+    backgroundColor: "#292A31",
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+
+  progressBar: {
+    height: "100%",
+    borderRadius: 3,
+  },
+
+  /* TRANSACTIONS */
+
+  recentHeader: {
+    paddingHorizontal: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+
+  viewAll: {
+    color: COLORS.green,
+    fontSize: 8,
+  },
+
+  recentContainer: {
+    marginHorizontal: 20,
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+  },
+
+  transaction: {
+    minHeight: 62,
+    flexDirection: "row",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: "#272830",
+    paddingHorizontal: 4,
+  },
+
+  transactionIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: "#202129",
     alignItems: "center",
     justifyContent: "center",
+    marginRight: 10,
   },
 
-  donutInner: {
-    alignItems: "center",
+  transactionInfo: {
+    flex: 1,
   },
 
-  spentSmall: {
+  transactionName: {
+    color: COLORS.white,
+    fontSize: 10,
+    fontWeight: "600",
+    marginBottom: 3,
+  },
+
+  transactionCategory: {
+    color: "#73747B",
+    fontSize: 7,
+  },
+
+  transactionAmount: {
+    color: COLORS.white,
     fontSize: 9,
-    color: "#999",
-  },
-
-  spentAmount: {
-    fontSize: 15,
-    fontWeight: "bold",
-  },
-
-  legend: {
-    marginLeft: 18,
-  },
-
-  legendItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 7,
-  },
-
-  legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 5,
-    marginRight: 7,
-  },
-
-  legendText: {
-    fontSize: 11,
-    color: "#222",
+    fontWeight: "600",
   },
 
   /* RECORDS */
 
-  recordsScreen: {
+  recordsTitle: {
+    color: COLORS.white,
+    fontSize: 20,
+    fontWeight: "700",
+    marginHorizontal: 20,
+    marginTop: 22,
+    marginBottom: 15,
+  },
+
+  searchBox: {
+    marginHorizontal: 20,
+    height: 38,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#2C2D35",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+  },
+
+  searchInput: {
     flex: 1,
-    backgroundColor: "#E7E7E7",
+    color: COLORS.white,
+    fontSize: 10,
+    marginHorizontal: 8,
   },
 
-  recordsHeader: {
-    height: 115,
-    backgroundColor: NAVY,
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
+  filters: {
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    marginBottom: 10,
   },
 
-  recordsBody: {
-    paddingHorizontal: 25,
-    paddingTop: 35,
-  },
-
-  recordsButton: {
-    height: 54,
-    backgroundColor: NAVY,
+  filterButton: {
+    backgroundColor: COLORS.card,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
     borderRadius: 12,
+    marginRight: 5,
+  },
+
+  filterButtonActive: {
+    backgroundColor: COLORS.green,
+  },
+
+  filterText: {
+    color: "#85868D",
+    fontSize: 6,
+  },
+
+  filterTextActive: {
+    color: COLORS.black,
+    fontWeight: "700",
+  },
+
+  dateHeading: {
+    color: COLORS.green,
+    fontSize: 7,
+    letterSpacing: 1,
+    marginHorizontal: 20,
+    marginBottom: 6,
+    marginTop: 8,
+  },
+
+  emptyText: {
+    color: COLORS.gray,
+    textAlign: "center",
+    marginTop: 40,
+    fontSize: 11,
+  },
+
+  floatingButton: {
+    position: "absolute",
+    right: 20,
+    bottom: 85,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: COLORS.green,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 18,
-  },
-
-  recordsButtonText: {
-    color: WHITE,
-    fontSize: 13,
-    fontWeight: "bold",
-  },
-
-  recentTitle: {
-    textAlign: "center",
-    fontSize: 20,
-    fontWeight: "bold",
-    marginTop: 20,
-    marginBottom: 18,
-  },
-
-  uploadHeader: {
-    height: 53,
-    backgroundColor: NAVY,
-    borderRadius: 15,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-around",
-  },
-
-  uploadHeaderText: {
-    color: WHITE,
-    fontSize: 8,
-    fontWeight: "bold",
-  },
-
-  uploadRow: {
-    height: 53,
-    backgroundColor: NAVY,
-    borderRadius: 15,
-    marginTop: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-around",
-  },
-
-  pictureBox: {
-    width: 55,
-  },
-
-  pictureText: {
-    color: WHITE,
-    fontSize: 8,
-  },
-
-  transactionText: {
-    color: WHITE,
-    fontSize: 8,
-  },
-
-  dateText: {
-    color: WHITE,
-    fontSize: 8,
+    elevation: 5,
   },
 
   /* PROFILE */
 
-  profileScreen: {
-    flex: 1,
-    backgroundColor: DARK,
+  profileTitle: {
+    color: COLORS.white,
+    fontSize: 20,
+    fontWeight: "700",
+    marginHorizontal: 20,
+    marginTop: 22,
   },
 
-  profileHeader: {
-    backgroundColor: NAVY,
-    height: 85,
-  },
-
-  profileBody: {
+  profileAvatar: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    borderWidth: 1.5,
+    borderColor: COLORS.green,
+    alignSelf: "center",
     alignItems: "center",
-    paddingTop: 25,
-  },
-
-  bigProfileCircle: {
-    width: 70,
-    height: 70,
-    borderRadius: 40,
-    backgroundColor: "#DDD",
     justifyContent: "center",
-    alignItems: "center",
-  },
-
-  bigProfileIcon: {
-    color: "#888",
-    fontSize: 38,
+    marginTop: 20,
   },
 
   profileName: {
-    color: WHITE,
-    fontSize: 16,
-    fontWeight: "bold",
-    marginTop: 8,
+    color: COLORS.white,
+    textAlign: "center",
+    fontSize: 14,
+    fontWeight: "700",
+    marginTop: 9,
   },
 
   profileEmail: {
-    color: "#777",
-    fontSize: 9,
-    marginBottom: 25,
+    color: "#73747B",
+    textAlign: "center",
+    fontSize: 8,
+    marginTop: 4,
   },
 
-  profileButton: {
-    width: "75%",
-    height: 42,
-    backgroundColor: WHITE,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 14,
-  },
-
-  /* REPORT */
-
-  reportScreen: {
-    flex: 1,
-    backgroundColor: "#E7E7E7",
-  },
-
-  reportHeader: {
-    height: 100,
-    backgroundColor: NAVY,
-  },
-
-  reportBody: {
-    padding: 25,
-  },
-
-  reportTitle: {
-    fontSize: 25,
-    fontWeight: "bold",
-  },
-
-  reportCard: {
-    marginTop: 25,
-    backgroundColor: WHITE,
-    padding: 25,
-    borderRadius: 15,
-  },
-
-  reportCardTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-
-  reportAmount: {
-    fontSize: 32,
-    fontWeight: "bold",
-    marginTop: 15,
-  },
-
-  reportDescription: {
-    color: GRAY,
-    marginTop: 10,
-  },
-
-  /* SIDE MENU */
-
-  menuOverlay: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
+  statsRow: {
     flexDirection: "row",
+    paddingHorizontal: 20,
+    marginTop: 18,
+    marginBottom: 24,
   },
 
-  menuBackground: {
+  statBox: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
-  },
-
-  sideMenu: {
-    width: width * 0.55,
-    backgroundColor: NAVY,
-    paddingTop: 40,
-    paddingHorizontal: 12,
-    paddingBottom: 20,
-  },
-
-  sideMenuTop: {
-    height: 45,
-  },
-
-  closeMenu: {
-    color: WHITE,
-    fontSize: 28,
-  },
-
-  menuButton: {
-    height: 43,
-    backgroundColor: "#E8E8E8",
-    borderRadius: 12,
+    backgroundColor: COLORS.card,
+    borderRadius: 8,
+    paddingVertical: 11,
     alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 10,
+    marginHorizontal: 4,
   },
 
-  menuButtonText: {
-    color: "#111",
+  statValue: {
+    color: COLORS.white,
     fontSize: 10,
-    fontWeight: "bold",
+    fontWeight: "700",
   },
+
+  statLabel: {
+    color: "#777880",
+    fontSize: 6,
+    marginTop: 4,
+  },
+
+  profileSection: {
+    color: COLORS.green,
+    fontSize: 7,
+    letterSpacing: 1,
+    marginHorizontal: 20,
+    marginBottom: 7,
+  },
+
+  profileMenu: {
+    backgroundColor: COLORS.card,
+    borderRadius: 10,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    paddingHorizontal: 12,
+  },
+
+  profileOption: {
+    height: 46,
+    borderBottomWidth: 1,
+    borderBottomColor: "#292A31",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  profileOptionLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  profileOptionText: {
+    color: COLORS.lightGray,
+    fontSize: 9,
+    marginLeft: 10,
+  },
+
+  /* LOGOUT */
 
   logoutButton: {
-    height: 43,
-    backgroundColor: "#E8E8E8",
-    borderRadius: 12,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 1,
+    borderColor: COLORS.red,
+    marginHorizontal: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 5,
+  },
+
+  logoutText: {
+    color: COLORS.red,
+    fontSize: 10,
+    fontWeight: "700",
+    marginLeft: 8,
+  },
+
+  /* BOTTOM NAV */
+
+  bottomNav: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 62,
+    backgroundColor: "#101117",
+    borderTopWidth: 1,
+    borderTopColor: "#282931",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+    paddingBottom:
+      Platform.OS === "ios" ? 5 : 0,
+  },
+
+  navItem: {
+    width: 70,
+    height: 50,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  /* MENU */
+
+  menuScreen: {
+    flex: 1,
+    backgroundColor: COLORS.black,
+    paddingHorizontal: 25,
+  },
+
+  menuHeader: {
+    height: 72,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  menuDivider: {
+    height: 1,
+    backgroundColor: "#2B2C32",
+    marginBottom: 4,
+  },
+
+  menuItem: {
+    height: 57,
+    borderBottomWidth: 1,
+    borderBottomColor: "#55565C",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 10,
+  },
+
+  menuItemText: {
+    color: COLORS.white,
+    fontSize: 14,
+  },
+
+  menuBottom: {
+    position: "absolute",
+    left: 25,
+    right: 25,
+    bottom: 30,
+  },
+
+  /* MODAL */
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor:
+      "rgba(0,0,0,0.75)",
+    justifyContent: "flex-end",
+  },
+
+  modalCard: {
+    backgroundColor: COLORS.card,
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    paddingHorizontal: 22,
+    paddingTop: 22,
+    paddingBottom: 30,
+  },
+
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 22,
+  },
+
+  modalTitle: {
+    color: COLORS.white,
+    fontSize: 18,
+    fontWeight: "700",
+  },
+
+  modalLabel: {
+    color: COLORS.lightGray,
+    fontSize: 9,
+    marginBottom: 7,
+  },
+
+  modalInput: {
+    height: 42,
+    borderWidth: 1,
+    borderColor: "#3A3B43",
+    borderRadius: 9,
+    color: COLORS.white,
+    paddingHorizontal: 12,
+    marginBottom: 15,
+    fontSize: 11,
+  },
+
+  categoryButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 15,
+    backgroundColor: "#25262E",
+    marginRight: 6,
+  },
+
+  categoryButtonActive: {
+    backgroundColor: COLORS.green,
+  },
+
+  categoryButtonText: {
+    color: COLORS.gray,
+    fontSize: 8,
+  },
+
+  categoryButtonTextActive: {
+    color: COLORS.black,
+    fontWeight: "700",
+  },
+
+  /* CAMERA */
+
+  scanPhotoButton: {
+    height: 45,
+    borderRadius: 23,
+    borderWidth: 1,
+    borderColor: COLORS.green,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 10,
   },
+
+  scanPhotoText: {
+    color: COLORS.green,
+    fontSize: 10,
+    fontWeight: "600",
+    marginLeft: 8,
+  },
+
+  receiptImageContainer: {
+    height: 150,
+    borderRadius: 12,
+    overflow: "hidden",
+    marginBottom: 15,
+    backgroundColor: "#111218",
+  },
+
+  receiptImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+
+  removePhoto: {
+    position: "absolute",
+    right: 8,
+    top: 8,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor:
+      "rgba(0,0,0,0.75)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
 });
