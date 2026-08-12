@@ -1,1315 +1,856 @@
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 
 import {
-  SafeAreaView,
   View,
   Text,
-  StyleSheet,
-  TouchableOpacity,
   TextInput,
-  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  SafeAreaView,
   StatusBar,
-  Dimensions,
-  Animated,
+  ScrollView,
+  Alert,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
+  Image,
 } from "react-native";
 
-import {
-  Ionicons,
-  MaterialCommunityIcons,
-} from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 
-const { width } = Dimensions.get("window");
-
-/* =====================================================
+/* =========================================================
    COLORS
-===================================================== */
+========================================================= */
 
-const NAVY = "#0D0D32";
-const BG = "#E5E5E5";
-const DARK = "#22222B";
-const GREEN = "#209B7F";
-const WHITE = "#FFFFFF";
-const RED = "#FF5C65";
-const GRAY = "#777780";
+const COLORS = {
+  black: "#09090B",
+  navy: "#101117",
+  card: "#181920",
+  green: "#19B394",
+  greenDark: "#118D78",
+  white: "#FFFFFF",
+  gray: "#92939A",
+  lightGray: "#C8C8CC",
+  border: "#303139",
+  red: "#FF4545",
+  blue: "#5D7EFF",
+  yellow: "#E9B94B",
+};
+const logout = () => {
+  setUser(null);
+  setMenuVisible(false);
+  setScreen("signin");
+};
 
-
-/* =====================================================
-   APP
-===================================================== */
+/* =========================================================
+   MAIN APP
+========================================================= */
 
 export default function App() {
+  const [screen, setScreen] = useState("landing");
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [user, setUser] = useState(null);
 
-  const [screen, setScreen] = useState("login");
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [expenses, setExpenses] = useState([
+    {
+      id: 1,
+      name: "Uniqlo",
+      category: "Shopping",
+      amount: 534.4,
+      date: "Today",
+    },
+    {
+      id: 2,
+      name: "Jollibee",
+      category: "Food & Dining",
+      amount: 520,
+      date: "Today",
+    },
+    {
+      id: 3,
+      name: "Netflix",
+      category: "Entertainment",
+      amount: 459,
+      date: "Yesterday",
+    },
+  ]);
 
-  /*
-   * SIDEBAR ANIMATION
-   *
-   * 0 = closed
-   * 1 = opened
-   */
-
-  const drawerAnimation = useRef(
-    new Animated.Value(0)
-  ).current;
-
-
-  /* =====================================================
-     OPEN SIDEBAR
-  ===================================================== */
-
-  const openDrawer = () => {
-
-    setDrawerOpen(true);
-
-    Animated.spring(drawerAnimation, {
-      toValue: 1,
-      useNativeDriver: true,
-      tension: 70,
-      friction: 10,
-    }).start();
-
-  };
-
-
-  /* =====================================================
-     CLOSE SIDEBAR
-  ===================================================== */
-
-  const closeDrawer = () => {
-
-    Animated.timing(drawerAnimation, {
-      toValue: 0,
-      duration: 220,
-      useNativeDriver: true,
-    }).start(() => {
-
-      setDrawerOpen(false);
-
-    });
-
-  };
-
-
-  /* =====================================================
+  /* =======================================================
      NAVIGATION
-  ===================================================== */
+  ======================================================= */
 
   const navigate = (page) => {
-
-    closeDrawer();
-
+    setMenuVisible(false);
     setScreen(page);
-
   };
 
+  /* =======================================================
+     ADD EXPENSE
+  ======================================================= */
 
-  /* =====================================================
-     SIDEBAR
-  ===================================================== */
+  const addExpense = (expense) => {
+    setExpenses((previous) => [
+      {
+        ...expense,
+        id: Date.now(),
+        date: "Today",
+      },
+      ...previous,
+    ]);
+  };
 
-  const Sidebar = () => {
+  /* =======================================================
+     LOGOUT
+  ======================================================= */
 
-    if (!drawerOpen) {
-      return null;
-    }
+  const logout = () => {
+    setUser(null);
+    setMenuVisible(false);
 
-    /*
-     * Sidebar moves from -300 → 0
-     */
+    // Go to SIGN IN after logout
+    setScreen("signin");
+  };
 
-    const drawerTranslateX =
-      drawerAnimation.interpolate({
-        inputRange: [0, 1],
-        outputRange: [-320, 0],
-      });
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={COLORS.black}
+      />
 
+      <View style={styles.container}>
 
-    /*
-     * Background becomes darker
-     */
+        {/* LANDING */}
 
-    const overlayOpacity =
-      drawerAnimation.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0, 0.45],
-      });
-
-
-    return (
-      <View style={styles.drawerOverlay}>
-
-        {/* =============================================
-            DARK BACKGROUND
-        ============================================= */}
-
-        <Animated.View
-          style={[
-            styles.drawerBackdrop,
-            {
-              opacity: overlayOpacity,
-            },
-          ]}
-        >
-
-          <TouchableOpacity
-            style={{ flex: 1 }}
-            activeOpacity={1}
-            onPress={closeDrawer}
+        {screen === "landing" && (
+          <LandingScreen
+            onMenu={() => setMenuVisible(true)}
+            onCreate={() => navigate("create")}
+            onSignIn={() => navigate("signin")}
+            onHow={() => navigate("how")}
           />
+        )}
 
-        </Animated.View>
+        {/* HOW IT WORKS */}
 
+        {screen === "how" && (
+          <HowItWorksScreen
+            onMenu={() => setMenuVisible(true)}
+            onCreate={() => navigate("create")}
+            onSignIn={() => navigate("signin")}
+          />
+        )}
 
-        {/* =============================================
-            SLIDING SIDEBAR
-        ============================================= */}
+        {/* CREATE ACCOUNT */}
 
-        <Animated.View
-          style={[
-            styles.drawer,
-            {
-              transform: [
-                {
-                  translateX: drawerTranslateX,
-                },
-              ],
-            },
-          ]}
+        {screen === "create" && (
+          <CreateAccountScreen
+            onBack={() => navigate("landing")}
+            onSignIn={() => navigate("signin")}
+            onCreate={(newUser) => {
+              setUser(newUser);
+              navigate("dashboard");
+            }}
+          />
+        )}
+
+        {/* SIGN IN */}
+
+        {screen === "signin" && (
+          <SignInScreen
+            onBack={() => navigate("landing")}
+            onCreate={() => navigate("create")}
+            onLogin={(loggedUser) => {
+              setUser(loggedUser);
+              navigate("dashboard");
+            }}
+          />
+        )}
+
+        {/* DASHBOARD */}
+
+        {screen === "dashboard" && (
+          <DashboardScreen
+            user={user}
+            expenses={expenses}
+            onNavigate={navigate}
+            onAddExpense={addExpense}
+          />
+        )}
+
+        {/* RECORDS */}
+
+        {screen === "records" && (
+          <RecordsScreen
+            expenses={expenses}
+            onNavigate={navigate}
+            onAddExpense={addExpense}
+          />
+        )}
+
+        {/* PROFILE */}
+
+        {screen === "profile" && (
+          <ProfileScreen
+            user={user}
+            onNavigate={navigate}
+            onLogout={logout}
+          />
+        )}
+
+        {/* MENU */}
+
+        <MobileMenu
+          visible={menuVisible}
+          onClose={() => setMenuVisible(false)}
+          onNavigate={navigate}
+        />
+
+      </View>
+    </SafeAreaView>
+  );
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+function Header({
+  onMenu,
+  showBack = false,
+  onBack,
+}) {
+  return (
+    <View style={styles.header}>
+
+      {showBack ? (
+        <TouchableOpacity
+          onPress={onBack}
+          style={styles.headerIcon}
         >
+          <Ionicons
+            name="arrow-back"
+            size={23}
+            color={COLORS.white}
+          />
+        </TouchableOpacity>
+      ) : (
+        <View style={{ width: 35 }} />
+      )}
 
-          {/* SIDEBAR CLOSE */}
+      <Text style={styles.logo}>
+        RECEIPT
+        <Text style={styles.logoGreen}>
+          IQ
+        </Text>
+      </Text>
 
-          <View style={styles.drawerTop}>
+      {onMenu ? (
+        <TouchableOpacity
+          onPress={onMenu}
+          style={styles.headerIcon}
+        >
+          <Ionicons
+            name="menu"
+            size={30}
+            color={COLORS.gray}
+          />
+        </TouchableOpacity>
+      ) : (
+        <View style={{ width: 35 }} />
+      )}
 
-            <TouchableOpacity
-              onPress={closeDrawer}
-              style={styles.closeButton}
-            >
+    </View>
+  );
+}
+
+/* =========================================================
+   TAG
+========================================================= */
+
+function Tag({ text }) {
+  return (
+    <View style={styles.tag}>
+
+      <View style={styles.diamond} />
+
+      <Text style={styles.tagText}>
+        {text}
+      </Text>
+
+    </View>
+  );
+}
+
+/* =========================================================
+   LANDING SCREEN
+========================================================= */
+
+function LandingScreen({
+  onMenu,
+  onCreate,
+  onSignIn,
+  onHow,
+}) {
+  return (
+    <View style={styles.page}>
+
+      <Header onMenu={onMenu} />
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.landingContent}
+      >
+
+        <Tag text="EXPENSE MANAGEMENT, ITEMIZED" />
+
+        <Text style={styles.heroTitle}>
+          Every Receipt.
+          {"\n"}
+          Accounted For.
+        </Text>
+
+        <Text style={styles.heroDescription}>
+          ReceiptIQ scans, categorizes, and
+          {"\n"}
+          reconciles every expense the moment it
+          {"\n"}
+          lands in your inbox.
+        </Text>
+
+        <PrimaryButton
+          title="Get Started Free"
+          onPress={onCreate}
+        />
+
+        <SecondaryButton
+          title="See how it works"
+          onPress={onHow}
+        />
+
+        <TouchableOpacity
+          style={styles.signInBottom}
+          onPress={onSignIn}
+        >
+          <Text style={styles.footerText}>
+            Already have an account?{" "}
+            <Text style={styles.greenText}>
+              Sign In
+            </Text>
+          </Text>
+        </TouchableOpacity>
+
+        <ReceiptPreview />
+
+      </ScrollView>
+
+    </View>
+  );
+}
+
+/* =========================================================
+   RECEIPT PREVIEW
+========================================================= */
+
+function ReceiptPreview() {
+  return (
+    <View style={styles.receiptWrapper}>
+
+      <View style={styles.receipt}>
+
+        <Text style={styles.receiptTitle}>
+          RECEIPTIQ
+        </Text>
+
+        <View style={styles.receiptLine} />
+
+        <Text style={styles.receiptNumber}>
+          RECEIPT # 0004251
+        </Text>
+
+        <View style={styles.receiptLine} />
+
+        <ReceiptRow
+          text="2 Transportation"
+          amount="₱ 100"
+        />
+
+        <ReceiptRow
+          text="1 Meals"
+          amount="₱ 100"
+        />
+
+        <ReceiptRow
+          text="2 School Supplies"
+          amount="₱ 500"
+        />
+
+        <ReceiptRow
+          text="5 Communication"
+          amount="₱ 500"
+        />
+
+        <View style={styles.receiptLine} />
+
+        <ReceiptRow
+          text="Subtotal"
+          amount="₱ 1200"
+        />
+
+        <ReceiptRow
+          text="Tax"
+          amount="₱ 25"
+        />
+
+        <View style={{ height: 15 }} />
+
+        <ReceiptRow
+          text="Total"
+          amount="₱ 1225"
+        />
+
+        <ReceiptRow
+          text="Cash"
+          amount="₱ 1500"
+        />
+
+        <ReceiptRow
+          text="Change"
+          amount="₱ 275"
+        />
+
+        <Text style={styles.receiptDate}>
+          8/8/2026 10:28:54 AM
+        </Text>
+
+      </View>
+
+    </View>
+  );
+}
+
+function ReceiptRow({
+  text,
+  amount,
+}) {
+  return (
+    <View style={styles.receiptRow}>
+
+      <Text style={styles.receiptText}>
+        {text}
+      </Text>
+
+      <Text style={styles.receiptText}>
+        {amount}
+      </Text>
+
+    </View>
+  );
+}
+
+/* =========================================================
+   HOW IT WORKS
+========================================================= */
+
+function HowItWorksScreen({
+  onMenu,
+  onCreate,
+  onSignIn,
+}) {
+  const steps = [
+    {
+      number: "01",
+      icon: "person-outline",
+      title: "Create Your Account",
+      description:
+        "Register and log in securely to get your own private space for every expense record.",
+    },
+    {
+      number: "02",
+      icon: "camera-outline",
+      title: "Add or Scan a Receipt",
+      description:
+        "Take a photo of a receipt or add an expense manually.",
+    },
+    {
+      number: "03",
+      icon: "pricetag-outline",
+      title: "Sorted and Tracked",
+      description:
+        "Each expense is organized into categories such as Food, Transport and Shopping.",
+    },
+    {
+      number: "04",
+      icon: "search-outline",
+      title: "Review and Search",
+      description:
+        "Search your records and review your spending whenever you need them.",
+    },
+  ];
+
+  return (
+    <View style={styles.page}>
+
+      <Header onMenu={onMenu} />
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.howContent}
+      >
+
+        <Tag text="HOW IT WORKS" />
+
+        <Text style={styles.howTitle}>
+          From sign-up to
+          {"\n"}
+          spending clarity,
+          {"\n"}
+          in four steps.
+        </Text>
+
+        <Text style={styles.heroDescription}>
+          Every feature works together
+          {"\n"}
+          from your first login to your
+          {"\n"}
+          monthly report.
+        </Text>
+
+        {steps.map((step) => (
+          <View
+            style={styles.stepCard}
+            key={step.number}
+          >
+
+            <View style={styles.stepIcon}>
 
               <Ionicons
-                name="close"
-                size={25}
-                color={WHITE}
+                name={step.icon}
+                size={27}
+                color={COLORS.green}
               />
 
-            </TouchableOpacity>
+            </View>
+
+            <View style={styles.stepContent}>
+
+              <Text style={styles.stepNumber}>
+                STEP {step.number}
+              </Text>
+
+              <Text style={styles.stepTitle}>
+                {step.title}
+              </Text>
+
+              <Text style={styles.stepDescription}>
+                {step.description}
+              </Text>
+
+            </View>
+
+          </View>
+        ))}
+
+        <PrimaryButton
+          title="Get Started Free"
+          onPress={onCreate}
+        />
+
+        <TouchableOpacity
+          style={styles.signInBottom}
+          onPress={onSignIn}
+        >
+
+          <Text style={styles.signInText}>
+            Sign In
+          </Text>
+
+        </TouchableOpacity>
+
+      </ScrollView>
+
+    </View>
+  );
+}
+
+/* =========================================================
+   CREATE ACCOUNT
+========================================================= */
+
+function CreateAccountScreen({
+  onBack,
+  onSignIn,
+  onCreate,
+}) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const createAccount = () => {
+
+    if (!name.trim()) {
+      Alert.alert(
+        "Missing Name",
+        "Please enter your name."
+      );
+      return;
+    }
+
+    if (!email.trim()) {
+      Alert.alert(
+        "Missing Email",
+        "Please enter your email."
+      );
+      return;
+    }
+
+    if (!password) {
+      Alert.alert(
+        "Missing Password",
+        "Please enter a password."
+      );
+      return;
+    }
+
+    onCreate({
+      name: name.trim(),
+      email: email.trim(),
+    });
+  };
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.page}
+      behavior={
+        Platform.OS === "ios"
+          ? "padding"
+          : undefined
+      }
+    >
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          flexGrow: 1,
+        }}
+      >
+
+        <View style={styles.authTop}>
+
+          <Header
+            showBack
+            onBack={onBack}
+          />
+
+          <View style={styles.authHero}>
+
+            <Text style={styles.authHeroTitle}>
+              Join Us.
+              {"\n"}
+              Start Something New.
+            </Text>
+
+            <Tag text="EXPENSE MANAGEMENT, ITEMIZED" />
 
           </View>
 
-
-          {/* DASHBOARD */}
-
-          <DrawerButton
-            icon="grid-outline"
-            title="Dashboard"
-            onPress={() =>
-              navigate("dashboard")
-            }
-          />
-
-
-          {/* RECORDS */}
-
-          <DrawerButton
-            icon="receipt-outline"
-            title="Records"
-            onPress={() =>
-              navigate("records")
-            }
-          />
-
-
-          {/* REPORT */}
-
-          <DrawerButton
-            icon="bar-chart-outline"
-            title="Report"
-            onPress={() =>
-              navigate("report")
-            }
-          />
-
-
-          {/* PROFILE */}
-
-          <DrawerButton
-            icon="person-outline"
-            title="Profile"
-            onPress={() =>
-              navigate("profile")
-            }
-          />
-
-
-          {/* LOG OUT */}
-
-          <DrawerButton 
-            icon="log-out-outline"
-            title="Log out"
-            onPress={() =>
-              navigate("login")
-            }
-          />
-
-        </Animated.View>
-
-      </View>
-    );
-  };
-
-
-  /* =====================================================
-     LOGIN
-  ===================================================== */
-
-  if (screen === "login") {
-
-    return (
-      <ScreenWrapper>
-
-        {/* TOP */}
-
-        <View style={styles.authTop}>
-
-          <View style={styles.fakeLogo} />
-
-          <TouchableOpacity
-            style={styles.menuIcon}
-            onPress={openDrawer}
-          >
-
-            <Ionicons
-              name="menu-outline"
-              size={28}
-              color={WHITE}
-            />
-
-          </TouchableOpacity>
-
-
-          <Text style={styles.authHeading}>
-
-            Welcome Back.
-            {"\n"}
-
-            Good To See You Again.
-
-          </Text>
-
         </View>
 
-
-        {/* BOTTOM */}
-
-        <View style={styles.authBottom}>
-
-          <Text style={styles.authTitle}>
-            SIGN IN
-          </Text>
-
-
-          <Text style={styles.authSubtitle}>
-            Enter your details to continue.
-          </Text>
-
-
-          <Input
-            label="Email"
-            placeholder="username@email.com"
-          />
-
-
-          <Input
-            label="Password"
-            placeholder="••••••••••••"
-            secure
-          />
-
-
-          <GreenButton
-            title="Sign In"
-            onPress={() =>
-              setScreen("dashboard")
-            }
-          />
-
-
-          <TouchableOpacity
-            onPress={() =>
-              setScreen("register")
-            }
-            style={styles.accountLink}
-          >
-
-            <Text style={styles.accountText}>
-
-              New here?{" "}
-
-              <Text
-                style={{
-                  fontWeight: "700",
-                }}
-              >
-                Create an Account
-              </Text>
-
-            </Text>
-
-          </TouchableOpacity>
-
-        </View>
-
-
-        <Sidebar />
-
-      </ScreenWrapper>
-    );
-  }
-
-
-  /* =====================================================
-     REGISTER
-  ===================================================== */
-
-  if (screen === "register") {
-
-    return (
-      <ScreenWrapper>
-
-        <View style={styles.authTop}>
-
-          <View style={styles.fakeLogo} />
-
-
-          <TouchableOpacity
-            style={styles.menuIcon}
-            onPress={openDrawer}
-          >
-
-            <Ionicons
-              name="menu-outline"
-              size={28}
-              color={WHITE}
-            />
-
-          </TouchableOpacity>
-
-
-          <Text style={styles.authHeading}>
-
-            Join Us.
-            {"\n"}
-
-            Start Something New
-            {"\n"}
-
-            Today.
-
-          </Text>
-
-        </View>
-
-
-        <ScrollView
-          style={styles.authBottom}
-          contentContainerStyle={{
-            paddingBottom: 30,
-          }}
-        >
+        <View style={styles.authPanel}>
 
           <Text style={styles.authTitle}>
             CREATE ACCOUNT
           </Text>
 
+          <Text style={styles.authSubtitle}>
+            Take less than a minute.
+          </Text>
+
+          <Input
+            label="Full Name"
+            value={name}
+            onChangeText={setName}
+          />
+
+          <Input
+            label="Email"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+          />
+
+          <Input
+            label="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+
+          <PrimaryButton
+            title="Create Account"
+            onPress={createAccount}
+          />
+
+          <View style={styles.authFooter}>
+
+            <Text style={styles.footerText}>
+              Already have an Account?{" "}
+            </Text>
+
+            <TouchableOpacity onPress={onSignIn}>
+              <Text style={styles.greenText}>
+                Sign In
+              </Text>
+            </TouchableOpacity>
+
+          </View>
+
+        </View>
+
+      </ScrollView>
+
+    </KeyboardAvoidingView>
+  );
+}
+
+/* =========================================================
+   SIGN IN
+========================================================= */
+
+function SignInScreen({
+  onBack,
+  onCreate,
+  onLogin,
+}) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const login = () => {
+
+    if (!email.trim()) {
+      Alert.alert(
+        "Missing Email",
+        "Please enter your email."
+      );
+      return;
+    }
+
+    if (!password) {
+      Alert.alert(
+        "Missing Password",
+        "Please enter your password."
+      );
+      return;
+    }
+
+    onLogin({
+      name:
+        email.split("@")[0] || "User",
+      email: email.trim(),
+    });
+  };
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.page}
+      behavior={
+        Platform.OS === "ios"
+          ? "padding"
+          : undefined
+      }
+    >
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          flexGrow: 1,
+        }}
+      >
+
+        <View style={styles.authTop}>
+
+          <Header
+            showBack
+            onBack={onBack}
+          />
+
+          <View style={styles.signinHero}>
+
+            <Text style={styles.authHeroTitle}>
+              Welcome Back.
+              {"\n"}
+              Good to See You Again.
+            </Text>
+
+            <Tag text="EXPENSE MANAGEMENT, ITEMIZED" />
+
+          </View>
+
+        </View>
+
+        <View style={styles.authPanel}>
+
+          <Text style={styles.authTitle}>
+            SIGN IN
+          </Text>
 
           <Text style={styles.authSubtitle}>
             Enter your details to continue.
           </Text>
 
-
-          <Input
-            label="Full Name"
-            placeholder="Full Name"
-          />
-
-
           <Input
             label="Email"
-            placeholder="username@email.com"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
           />
-
 
           <Input
             label="Password"
-            placeholder="••••••••••••"
-            secure
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
           />
 
-
-          <GreenButton
+          <PrimaryButton
             title="Sign In"
-            onPress={() =>
-              setScreen("setup")
-            }
+            onPress={login}
           />
 
+          <View style={styles.authFooter}>
 
-          <TouchableOpacity
-            onPress={() =>
-              setScreen("login")
-            }
-            style={styles.accountLink}
-          >
+            <Text style={styles.footerText}>
+              New here?{" "}
+            </Text>
 
-            <Text style={styles.accountText}>
-
-              Already have an account?{" "}
-
-              <Text
-                style={{
-                  fontWeight: "700",
-                }}
-              >
-                Sign In
+            <TouchableOpacity onPress={onCreate}>
+              <Text style={styles.greenText}>
+                Create an Account
               </Text>
-
-            </Text>
-
-          </TouchableOpacity>
-
-        </ScrollView>
-
-
-        <Sidebar />
-
-      </ScreenWrapper>
-    );
-  }
-
-
-  /* =====================================================
-     SETUP
-  ===================================================== */
-
-  if (screen === "setup") {
-
-    return (
-      <ScreenWrapper>
-
-        <View style={styles.setupTop}>
-
-          <Text style={styles.setupHeading}>
-
-            You're In.
-            {"\n"}
-
-            Let's Get You Set Up.
-
-          </Text>
-
-        </View>
-
-
-        <View style={styles.setupBottom}>
-
-          <Text style={styles.authTitle}>
-            WELCOME, User
-          </Text>
-
-
-          <Text style={styles.setupDescription}>
-
-            Your account is ready. Here's a quick
-            {"\n"}
-            look at what you can do first.
-
-          </Text>
-
-
-          <SetupOption
-            icon="person-outline"
-            title="Complete your profile"
-            subtitle="Add Profile Photo"
-          />
-
-
-          <SetupOption
-            icon="settings-outline"
-            title="Set Your Preferences"
-            subtitle="Tailor it to how you work"
-          />
-
-
-          <GreenButton
-            title="Go to Dashboard"
-            onPress={() =>
-              setScreen("dashboard")
-            }
-          />
-
-        </View>
-
-      </ScreenWrapper>
-    );
-  }
-
-
-  /* =====================================================
-     DASHBOARD
-  ===================================================== */
-
-  if (screen === "dashboard") {
-
-    return (
-      <ScreenWrapper>
-
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingBottom: 40,
-          }}
-        >
-
-          {/* HEADER */}
-
-          <View style={styles.dashboardHeader}>
-
-            <TouchableOpacity
-              style={styles.dashboardMenu}
-              onPress={openDrawer}
-            >
-
-              <Ionicons
-                name="menu-outline"
-                size={28}
-                color={WHITE}
-              />
-
-            </TouchableOpacity>
-
-
-            <View style={styles.avatar}>
-
-              <Ionicons
-                name="person"
-                size={25}
-                color="#777"
-              />
-
-            </View>
-
-
-            <Text style={styles.welcomeSmall}>
-              Welcome back,
-            </Text>
-
-
-            <Text style={styles.dashboardUser}>
-              User
-            </Text>
-
-
-            <Text style={styles.balanceLabel}>
-              TOTAL BALANCE
-            </Text>
-
-
-            <Text style={styles.balance}>
-
-              ₱ 12,480
-
-              <Text
-                style={styles.balanceDecimal}
-              >
-                .50
-              </Text>
-
-            </Text>
-
-          </View>
-
-
-          {/* SCAN */}
-
-          <TouchableOpacity
-            style={styles.scanButton}
-            onPress={() =>
-              setScreen("scan")
-            }
-          >
-
-            <View style={styles.scanCircle}>
-
-              <MaterialCommunityIcons
-                name="qrcode-scan"
-                size={34}
-                color={WHITE}
-              />
-
-            </View>
-
-
-            <Text style={styles.scanText}>
-              Scan
-            </Text>
-
-          </TouchableOpacity>
-
-
-          {/* SPENDING */}
-
-          <SpendingCard />
-
-        </ScrollView>
-
-
-        <Sidebar />
-
-      </ScreenWrapper>
-    );
-  }
-
-
-  /* =====================================================
-     SCAN HOME
-  ===================================================== */
-
-  if (screen === "scan") {
-
-    return (
-      <ScreenWrapper>
-
-        <View style={styles.simpleHeader}>
-
-          <TouchableOpacity
-            onPress={openDrawer}
-          >
-
-            <Ionicons
-              name="menu-outline"
-              size={28}
-              color={WHITE}
-            />
-
-          </TouchableOpacity>
-
-        </View>
-
-
-        <View style={styles.scanHome}>
-
-          <DarkButton
-            title="Take Photo"
-            onPress={() =>
-              setScreen("camera")
-            }
-          />
-
-
-          <DarkButton
-            title="Upload Photo"
-            onPress={() =>
-              setScreen("review")
-            }
-          />
-
-
-          <DarkButton
-            title="Add Manual Receipt"
-            onPress={() =>
-              setScreen("review")
-            }
-          />
-
-
-          <Text style={styles.recentTitle}>
-            Recent Uploads
-          </Text>
-
-
-          <RecentUpload />
-          <RecentUpload />
-          <RecentUpload />
-
-        </View>
-
-
-        <Sidebar />
-
-      </ScreenWrapper>
-    );
-  }
-
-
-  /* =====================================================
-     CAMERA
-  ===================================================== */
-
-  if (screen === "camera") {
-
-    return (
-      <View style={styles.cameraScreen}>
-
-        <StatusBar
-          barStyle="light-content"
-        />
-
-
-        <View style={styles.cameraHeader}>
-
-          <TouchableOpacity
-            onPress={() =>
-              setScreen("scan")
-            }
-          >
-
-            <Ionicons
-              name="arrow-back"
-              size={24}
-              color={WHITE}
-            />
-
-          </TouchableOpacity>
-
-
-          <Text style={styles.cameraTitle}>
-            Camera Scan
-          </Text>
-
-
-          <Ionicons
-            name="settings-outline"
-            size={23}
-            color={WHITE}
-          />
-
-        </View>
-
-
-        {/* CAMERA FRAME */}
-
-        <View style={styles.cameraFrame}>
-
-          <View style={styles.receiptPreview}>
-
-            <Text style={styles.receiptStore}>
-              STARBUCKS COFFEE
-            </Text>
-
-
-            <Text style={styles.receiptSmall}>
-              123 Broadway, New York, NY
-            </Text>
-
-
-            <View style={styles.receiptLine} />
-
-
-            <Text style={styles.receiptCenter}>
-              CASH RECEIPT
-            </Text>
-
-
-            <ReceiptItem
-              name="Caffe Latte"
-              price="4.75"
-            />
-
-
-            <ReceiptItem
-              name="Iced Caramel Macch"
-              price="5.25"
-            />
-
-
-            <ReceiptItem
-              name="Avocado Toast Slice"
-              price="12.50"
-            />
-
-
-            <ReceiptItem
-              name="Warm Butter Croissant"
-              price="3.00"
-            />
-
-
-            <View style={styles.receiptLine} />
-
-
-            <Text style={styles.receiptTotal}>
-              TOTAL                 $25.50
-            </Text>
-
-
-            <Text style={styles.thankYou}>
-              THANK YOU!
-            </Text>
-
-          </View>
-
-        </View>
-
-
-        <Text style={styles.alignText}>
-          Align receipt within the frame to scan
-        </Text>
-
-
-        {/* CAMERA BUTTONS */}
-
-        <View style={styles.cameraActions}>
-
-          <TouchableOpacity
-            style={styles.cameraActionButton}
-            onPress={() =>
-              setScreen("scan")
-            }
-          >
-
-            <Ionicons
-              name="close-circle-outline"
-              size={18}
-              color={WHITE}
-            />
-
-            <Text style={styles.cameraActionText}>
-              Retake Scan
-            </Text>
-
-          </TouchableOpacity>
-
-
-          <TouchableOpacity
-            style={styles.deleteScan}
-            onPress={() =>
-              setScreen("scan")
-            }
-          >
-
-            <Ionicons
-              name="trash-outline"
-              size={18}
-              color={RED}
-            />
-
-            <Text style={styles.deleteText}>
-              Delete Scan
-            </Text>
-
-          </TouchableOpacity>
-
-        </View>
-
-
-        {/* CAMERA BOTTOM */}
-
-        <View style={styles.cameraBottom}>
-
-          <TouchableOpacity
-            style={styles.roundIcon}
-          >
-
-            <Ionicons
-              name="images-outline"
-              size={22}
-              color={WHITE}
-            />
-
-          </TouchableOpacity>
-
-
-          <TouchableOpacity
-            style={styles.shutter}
-            onPress={() =>
-              setScreen("review")
-            }
-          >
-
-            <View style={styles.shutterInner} />
-
-          </TouchableOpacity>
-
-
-          <TouchableOpacity
-            style={styles.roundIcon}
-          >
-
-            <Ionicons
-              name="document-text-outline"
-              size={22}
-              color={WHITE}
-            />
-
-          </TouchableOpacity>
-
-        </View>
-
-      </View>
-    );
-  }
-
-
-  /* =====================================================
-     REVIEW
-  ===================================================== */
-
-  if (screen === "review") {
-
-    return (
-      <ScreenWrapper>
-
-        <View style={styles.reviewHeader}>
-
-          <TouchableOpacity
-            onPress={() =>
-              setScreen("scan")
-            }
-          >
-
-            <Ionicons
-              name="arrow-back"
-              size={22}
-              color={WHITE}
-            />
-
-          </TouchableOpacity>
-
-
-          <Text style={styles.reviewTitle}>
-            Review Details
-          </Text>
-
-
-          <Ionicons
-            name="help-circle-outline"
-            size={22}
-            color={WHITE}
-          />
-
-
-          <Text style={styles.reviewSubtitle}>
-            Confirm extracted receipt data below.
-          </Text>
-
-        </View>
-
-
-        <ScrollView
-          style={styles.reviewBody}
-          contentContainerStyle={{
-            paddingBottom: 30,
-          }}
-        >
-
-          {/* EXTRACTED RECEIPT */}
-
-          <View style={styles.extractedCard}>
-
-            <Ionicons
-              name="document-text-outline"
-              size={28}
-              color="#20BDB4"
-            />
-
-
-            <Ionicons
-              name="checkmark-circle"
-              size={16}
-              color="#20BDB4"
-              style={{
-                position: "absolute",
-                right : 90,
-                top: 10,
-              }}
-            />
-
-
-            <Text style={styles.storeName}>
-              Starbucks
-            </Text>
-
-
-            <Text style={styles.extractedAmount}>
-              $25.50
-            </Text>
-
-
-            <Text style={styles.extractedText}>
-
-              We've extracted your info — make changes if
-              {"\n"}
-              needed.
-
-            </Text>
-
-          </View>
-
-
-          <ReviewRow
-            icon="close-circle-outline"
-            label="Merchant"
-            value="Starbucks"
-          />
-
-
-          <ReviewRow
-            icon="calendar-outline"
-            label="Date"
-            value="Aug 2, 2025"
-          />
-
-
-          <ReviewRow
-            icon="card-outline"
-            label="Total"
-            value="$25.50"
-          />
-
-
-          <ReviewRow
-            icon="card-outline"
-            label="Payment Method"
-            value="Visa •••• 5643"
-          />
-
-
-          <ReviewRow
-            icon="grid-outline"
-            label="Category"
-            value="Food & Beverage"
-            dropdown
-          />
-
-
-          <DarkButton
-            title="✓  Confirm & Save Expense"
-            onPress={() =>
-              setScreen("dashboard")
-            }
-          />
-
-
-          {/* EDIT / DELETE */}
-
-          <View style={styles.editDeleteRow}>
-
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() =>
-                setScreen("edit")
-              }
-            >
-
-              <Ionicons
-                name="create-outline"
-                size={16}
-                color={NAVY}
-              />
-
-              <Text style={styles.editText}>
-                Edit
-              </Text>
-
-            </TouchableOpacity>
-
-
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={() =>
-                setScreen("scan")
-              }
-            >
-
-              <Ionicons
-                name="trash-outline"
-                size={16}
-                color={RED}
-              />
-
-              <Text style={styles.deleteText}>
-                Delete
-              </Text>
-
             </TouchableOpacity>
 
           </View>
 
-        </ScrollView>
-
-      </ScreenWrapper>
-    );
-  }
-
-
-  /* =====================================================
-     EDIT
-  ===================================================== */
-
-  if (screen === "edit") {
-
-    return (
-      <ScreenWrapper>
-
-        <View style={styles.simpleHeader}>
-
-          <TouchableOpacity
-            onPress={() =>
-              setScreen("review")
-            }
-          >
-
-            <Ionicons
-              name="arrow-back"
-              size={26}
-              color={WHITE}
-            />
-
-          </TouchableOpacity>
-
-
-          <Text style={styles.editHeaderTitle}>
-            Edit Receipt
-          </Text>
-
         </View>
 
+      </ScrollView>
 
-        <ScrollView
-          style={{
-            padding: 20,
-          }}
-          contentContainerStyle={{
-            paddingBottom: 30,
-          }}
-        >
-
-          <EditInput
-            label="Merchant"
-            value="Starbucks"
-          />
-
-
-          <EditInput
-            label="Date"
-            value="Aug 2, 2025"
-          />
-
-
-          <EditInput
-            label="Total"
-            value="$25.50"
-          />
-
-
-          <EditInput
-            label="Payment Method"
-            value="Visa •••• 5643"
-          />
-
-
-          <EditInput
-            label="Category"
-            value="Food & Beverage"
-          />
-
-
-          <DarkButton
-            title="Save Changes"
-            onPress={() =>
-              setScreen("review")
-            }
-          />
-
-        </ScrollView>
-
-      </ScreenWrapper>
-    );
-  }
-
-
-  /* =====================================================
-     RECORDS / REPORT / PROFILE
-  ===================================================== */
-
-  return (
-    <ScreenWrapper>
-
-      <View style={styles.simpleHeader}>
-
-        <TouchableOpacity
-          onPress={openDrawer}
-        >
-
-          <Ionicons
-            name="menu-outline"
-            size={28}
-            color={WHITE}
-          />
-
-        </TouchableOpacity>
-
-      </View>
-
-
-      <View style={styles.placeholderPage}>
-
-        <Text style={styles.placeholderTitle}>
-
-          {screen.charAt(0).toUpperCase() +
-            screen.slice(1)}
-
-        </Text>
-
-
-        <Text style={styles.placeholderText}>
-          This screen can be developed next.
-        </Text>
-
-      </View>
-
-
-      <Sidebar />
-
-    </ScreenWrapper>
+    </KeyboardAvoidingView>
   );
-
 }
 
-
-/* =====================================================
-   SCREEN WRAPPER
-===================================================== */
-
-function ScreenWrapper({ children }) {
-
-  return (
-    <SafeAreaView style={styles.container}>
-
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor={NAVY}
-      />
-
-      {children}
-
-    </SafeAreaView>
-  );
-
-}
-
-
-/* =====================================================
+/* =========================================================
    INPUT
-===================================================== */
+========================================================= */
 
 function Input({
   label,
-  placeholder,
-  secure,
+  value,
+  onChangeText,
+  secureTextEntry,
+  keyboardType,
 }) {
-
   return (
     <View style={styles.inputContainer}>
 
@@ -1317,1362 +858,2384 @@ function Input({
         {label}
       </Text>
 
-
       <TextInput
-        placeholder={placeholder}
-        placeholderTextColor="#777780"
-        secureTextEntry={secure}
         style={styles.input}
-      />
-
-    </View>
-  );
-
-}
-
-
-/* =====================================================
-   EDIT INPUT
-===================================================== */
-
-function EditInput({
-  label,
-  value,
-}) {
-
-  return (
-    <View style={styles.editInputContainer}>
-
-      <Text style={styles.editLabel}>
-        {label}
-      </Text>
-
-
-      <TextInput
         value={value}
-        style={styles.editInput}
+        onChangeText={onChangeText}
+        secureTextEntry={secureTextEntry}
+        keyboardType={keyboardType}
+        autoCapitalize="none"
+        autoCorrect={false}
+        placeholderTextColor="#55565D"
       />
 
     </View>
   );
-
 }
 
+/* =========================================================
+   DASHBOARD
+========================================================= */
 
-/* =====================================================
-   GREEN BUTTON
-===================================================== */
-
-function GreenButton({
-  title,
-  onPress,
+function DashboardScreen({
+  user,
+  expenses,
+  onNavigate,
+  onAddExpense,
 }) {
+  const [modalVisible, setModalVisible] =
+    useState(false);
 
-  return (
-    <TouchableOpacity
-      style={styles.greenButton}
-      onPress={onPress}
-    >
-
-      <Text style={styles.greenButtonText}>
-        {title}
-      </Text>
-
-    </TouchableOpacity>
+  const total = expenses.reduce(
+    (sum, expense) =>
+      sum + Number(expense.amount),
+    0
   );
 
-}
-
-
-/* =====================================================
-   DARK BUTTON
-===================================================== */
-
-function DarkButton({
-  title,
-  onPress,
-}) {
-
   return (
-    <TouchableOpacity
-      style={styles.darkButton}
-      onPress={onPress}
-    >
+    <View style={styles.dashboardPage}>
 
-      <Text style={styles.darkButtonText}>
-        {title}
-      </Text>
-
-    </TouchableOpacity>
-  );
-
-}
-
-
-/* =====================================================
-   DRAWER BUTTON
-===================================================== */
-
-function DrawerButton({
-  icon,
-  title,
-  onPress,
-}) {
-
-  return (
-    <TouchableOpacity
-      style={styles.drawerButton}
-      onPress={onPress}
-      activeOpacity={0.75}
-    >
-
-      <Ionicons
-        name={icon}
-        size={20}
-        color={NAVY}
-      />
-
-
-      <Text style={styles.drawerButtonText}>
-        {title}
-      </Text>
-
-    </TouchableOpacity>
-  );
-
-}
-
-
-/* =====================================================
-   SETUP OPTION
-===================================================== */
-
-function SetupOption({
-  icon,
-  title,
-  subtitle,
-}) {
-
-  return (
-    <TouchableOpacity
-      style={styles.setupOption}
-    >
-
-      <Ionicons
-        name={icon}
-        size={28}
-        color={WHITE}
-      />
-
-
-      <View
-        style={{
-          marginLeft: 14,
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingBottom: 110,
         }}
       >
 
-        <Text style={styles.setupOptionTitle}>
-          {title}
-        </Text>
+        <View style={styles.dashboardHeader}>
 
+          <View>
 
-        <Text style={styles.setupOptionSubtitle}>
-          {subtitle}
-        </Text>
+            <Text style={styles.welcomeSmall}>
+              Welcome Back,
+            </Text>
 
-      </View>
+            <Text style={styles.dashboardUser}>
+              {user?.name || "User"}
+            </Text>
+
+          </View>
+
+          <TouchableOpacity
+            onPress={() =>
+              onNavigate("profile")
+            }
+          >
+
+            <Ionicons
+              name="person-circle-outline"
+              size={37}
+              color={COLORS.green}
+            />
+
+          </TouchableOpacity>
+
+        </View>
+
+        <View style={styles.balanceCard}>
+
+          <Text style={styles.balanceLabel}>
+            TOTAL EXPENSES
+          </Text>
+
+          <Text style={styles.balanceAmount}>
+            ₱
+            {total.toLocaleString("en-PH", {
+              minimumFractionDigits: 2,
+            })}
+          </Text>
+
+          <Text style={styles.balanceHint}>
+            Your expenses are being tracked
+          </Text>
+
+        </View>
+
+        <View style={styles.quickActions}>
+
+          <QuickAction
+            icon="camera-outline"
+            title="Scan"
+            onPress={() =>
+              setModalVisible(true)
+            }
+          />
+
+          <QuickAction
+            icon="add-circle-outline"
+            title="Add"
+            onPress={() =>
+              setModalVisible(true)
+            }
+          />
+
+          <QuickAction
+            icon="wallet-outline"
+            title="Budget"
+            onPress={() =>
+              Alert.alert(
+                "Budget",
+                "Budget management will be available here."
+              )
+            }
+          />
+
+        </View>
+
+        <SectionTitle
+          title="Spending by Category"
+          action="This Month"
+        />
+
+        <SpendingChart
+          expenses={expenses}
+        />
+
+        <View style={styles.recentHeader}>
+
+          <Text style={styles.sectionTitle}>
+            Recent Transactions
+          </Text>
+
+          <TouchableOpacity
+            onPress={() =>
+              onNavigate("records")
+            }
+          >
+
+            <Text style={styles.viewAll}>
+              View All →
+            </Text>
+
+          </TouchableOpacity>
+
+        </View>
+
+        <View style={styles.recentContainer}>
+
+          {expenses
+            .slice(0, 3)
+            .map((expense) => (
+              <TransactionRow
+                key={expense.id}
+                expense={expense}
+              />
+            ))}
+
+        </View>
+
+      </ScrollView>
+
+      <BottomNavigation
+        active="dashboard"
+        onNavigate={onNavigate}
+      />
+
+      <AddExpenseModal
+        visible={modalVisible}
+        onClose={() =>
+          setModalVisible(false)
+        }
+        onAdd={(expense) => {
+          onAddExpense(expense);
+          setModalVisible(false);
+        }}
+      />
+
+    </View>
+  );
+}
+
+/* =========================================================
+   QUICK ACTION
+========================================================= */
+
+function QuickAction({
+  icon,
+  title,
+  onPress,
+}) {
+  return (
+    <TouchableOpacity
+      style={styles.quickAction}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+
+      <Ionicons
+        name={icon}
+        size={23}
+        color={COLORS.green}
+      />
+
+      <Text style={styles.quickActionText}>
+        {title}
+      </Text>
 
     </TouchableOpacity>
   );
-
 }
 
+/* =========================================================
+   SPENDING CHART
+========================================================= */
 
-/* =====================================================
-   SPENDING CARD
-===================================================== */
+function SpendingChart({
+  expenses,
+}) {
+  const categories = [
+    {
+      name: "Shopping",
+      color: COLORS.green,
+    },
+    {
+      name: "Food & Dining",
+      color: COLORS.blue,
+    },
+    {
+      name: "Entertainment",
+      color: COLORS.yellow,
+    },
+    {
+      name: "Transportation",
+      color: COLORS.red,
+    },
+  ];
 
-function SpendingCard() {
+  const getTotal = (category) =>
+    expenses
+      .filter(
+        (item) =>
+          item.category === category
+      )
+      .reduce(
+        (sum, item) =>
+          sum + Number(item.amount),
+        0
+      );
+
+  const max = Math.max(
+    ...categories.map((x) =>
+      getTotal(x.name)
+    ),
+    100
+  );
 
   return (
-    <View style={styles.spendingCard}>
+    <View style={styles.chartCard}>
 
-      <View style={styles.spendingHeader}>
+      <View style={styles.chartHeader}>
 
-        <Text style={styles.spendingTitle}>
-          Spending Breakdown
+        <Text style={styles.chartTitle}>
+          Spending by Category
         </Text>
 
-
-        <Text style={styles.thisMonth}>
+        <Text style={styles.chartMonth}>
           This Month
         </Text>
 
       </View>
 
+      {categories.map((category) => {
 
-      <View style={styles.chartRow}>
+        const amount =
+          getTotal(category.name);
 
-        <View style={styles.fakeChart}>
+        return (
+          <View
+            key={category.name}
+            style={styles.chartRow}
+          >
 
-          <View style={styles.chartCenter}>
+            <View style={styles.chartLabelRow}>
 
-            <Text style={styles.spentLabel}>
-              SPENT
-            </Text>
+              <Text style={styles.chartCategory}>
+                {category.name}
+              </Text>
 
+              <Text style={styles.chartAmount}>
+                ₱{amount.toFixed(2)}
+              </Text>
 
-            <Text style={styles.spentAmount}>
-              $1,240
-            </Text>
+            </View>
+
+            <View style={styles.progressBackground}>
+
+              <View
+                style={[
+                  styles.progressBar,
+                  {
+                    width: `${Math.max(
+                      (amount / max) * 100,
+                      3
+                    )}%`,
+                    backgroundColor:
+                      category.color,
+                  },
+                ]}
+              />
+
+            </View>
 
           </View>
+        );
+      })}
+
+    </View>
+  );
+}
+
+/* =========================================================
+   RECORDS
+========================================================= */
+
+function RecordsScreen({
+  expenses,
+  onNavigate,
+  onAddExpense,
+}) {
+  const [search, setSearch] =
+    useState("");
+
+  const [modalVisible, setModalVisible] =
+    useState(false);
+
+  const filtered =
+    expenses.filter((expense) =>
+      `${expense.name} ${expense.category}`
+        .toLowerCase()
+        .includes(
+          search.toLowerCase()
+        )
+    );
+
+  return (
+    <View style={styles.dashboardPage}>
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingBottom: 110,
+        }}
+      >
+
+        <Text style={styles.recordsTitle}>
+          Records
+        </Text>
+
+        <View style={styles.searchBox}>
+
+          <Ionicons
+            name="search-outline"
+            size={19}
+            color={COLORS.gray}
+          />
+
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search Records"
+            placeholderTextColor="#66676E"
+            value={search}
+            onChangeText={setSearch}
+          />
 
         </View>
 
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filters}
+        >
 
-        <View style={styles.legend}>
+          {[
+            "All",
+            "Shopping",
+            "Food & Dining",
+            "Entertainment",
+            "Transportation",
+          ].map((filter, index) => (
 
-          <Legend
-            color="#209B7F"
-            text="Shopping"
-          />
+            <TouchableOpacity
+              key={filter}
+              style={[
+                styles.filterButton,
+                index === 0 &&
+                  styles.filterButtonActive,
+              ]}
+            >
 
-          <Legend
-            color="#3798EF"
-            text="Food & Dining"
-          />
+              <Text
+                style={[
+                  styles.filterText,
+                  index === 0 &&
+                    styles.filterTextActive,
+                ]}
+              >
+                {filter}
+              </Text>
 
-          <Legend
-            color="#FF9900"
-            text="Entertainment"
-          />
+            </TouchableOpacity>
 
-          <Legend
-            color="#B34BDB"
-            text="Transport"
-          />
+          ))}
 
-        </View>
+        </ScrollView>
 
-      </View>
+        <Text style={styles.dateHeading}>
+          RECENT
+        </Text>
 
-    </View>
-  );
+        {filtered.map((expense) => (
+          <View
+            key={expense.id}
+            style={{
+              marginHorizontal: 20,
+            }}
+          >
 
-}
+            <TransactionRow
+              expense={expense}
+            />
 
+          </View>
+        ))}
 
-/* =====================================================
-   LEGEND
-===================================================== */
+        {filtered.length === 0 && (
+          <Text style={styles.emptyText}>
+            No records found.
+          </Text>
+        )}
 
-function Legend({
-  color,
-  text,
-}) {
+      </ScrollView>
 
-  return (
-    <View style={styles.legendItem}>
+      <TouchableOpacity
+        style={styles.floatingButton}
+        onPress={() =>
+          setModalVisible(true)
+        }
+      >
 
-      <View
-        style={[
-          styles.legendDot,
-          {
-            backgroundColor: color,
-          },
-        ]}
+        <Ionicons
+          name="add"
+          size={28}
+          color={COLORS.black}
+        />
+
+      </TouchableOpacity>
+
+      <BottomNavigation
+        active="records"
+        onNavigate={onNavigate}
       />
 
-
-      <Text style={styles.legendText}>
-        {text}
-      </Text>
-
-    </View>
-  );
-
-}
-
-
-/* =====================================================
-   RECENT UPLOAD
-===================================================== */
-
-function RecentUpload() {
-
-  return (
-    <View style={styles.recentUpload}>
-
-      <Text style={styles.recentHeaderText}>
-        Picture
-      </Text>
-
-
-      <Text style={styles.recentHeaderText}>
-        Transaction No.
-      </Text>
-
-
-      <Text style={styles.recentHeaderText}>
-        DATE
-      </Text>
-
-    </View>
-  );
-
-}
-
-
-/* =====================================================
-   RECEIPT ITEM
-===================================================== */
-
-function ReceiptItem({
-  name,
-  price,
-}) {
-
-  return (
-    <View style={styles.receiptItem}>
-
-      <Text style={styles.receiptItemName}>
-        {name}
-      </Text>
-
-
-      <Text style={styles.receiptItemPrice}>
-        {price}
-      </Text>
-
-    </View>
-  );
-
-}
-
-
-/* =====================================================
-   REVIEW ROW
-===================================================== */
-
-function ReviewRow({
-  icon,
-  label,
-  value,
-  dropdown,
-}) {
-
-  return (
-    <View style={styles.reviewRow}>
-
-      <Ionicons
-        name={icon}
-        size={17}
-        color="#707780"
-      />
-
-
-      <Text style={styles.reviewLabel}>
-        {label}
-      </Text>
-
-
-      <View
-        style={{
-          flex: 1,
+      <AddExpenseModal
+        visible={modalVisible}
+        onClose={() =>
+          setModalVisible(false)
+        }
+        onAdd={(expense) => {
+          onAddExpense(expense);
+          setModalVisible(false);
         }}
       />
 
+    </View>
+  );
+}
 
-      <Text style={styles.reviewValue}>
-        {value}
-      </Text>
+/* =========================================================
+   TRANSACTION
+========================================================= */
 
+function TransactionRow({
+  expense,
+}) {
+  const iconMap = {
+    Shopping: "cart-outline",
+    "Food & Dining":
+      "restaurant-outline",
+    Entertainment:
+      "game-controller-outline",
+    Transportation:
+      "car-outline",
+  };
 
-      {dropdown && (
+  return (
+    <View style={styles.transaction}>
+
+      <View style={styles.transactionIcon}>
+
         <Ionicons
-          name="chevron-down"
-          size={16}
-          color={NAVY}
+          name={
+            iconMap[expense.category] ||
+            "receipt-outline"
+          }
+          size={21}
+          color={COLORS.green}
         />
-      )}
+
+      </View>
+
+      <View style={styles.transactionInfo}>
+
+        <Text style={styles.transactionName}>
+          {expense.name}
+        </Text>
+
+        <Text style={styles.transactionCategory}>
+          {expense.category}
+        </Text>
+
+      </View>
+
+      <Text style={styles.transactionAmount}>
+        ₱
+        {Number(expense.amount).toFixed(2)}
+      </Text>
 
     </View>
   );
-
 }
 
+/* =========================================================
+   PROFILE
+========================================================= */
 
-/* =====================================================
+function ProfileScreen({
+  user,
+  onNavigate,
+  onLogout,
+}) {
+  const handleLogout = () => {
+
+    Alert.alert(
+      "Log Out",
+      "Are you sure you want to log out?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Log Out",
+          style: "destructive",
+
+          onPress: () => {
+            onLogout();
+          },
+        },
+      ]
+    );
+  };
+
+  return (
+    <View style={styles.dashboardPage}>
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingBottom: 120,
+        }}
+      >
+
+        <Text style={styles.profileTitle}>
+          Profile
+        </Text>
+
+        <View style={styles.profileAvatar}>
+
+          <Ionicons
+            name="person-outline"
+            size={50}
+            color={COLORS.green}
+          />
+
+        </View>
+
+        <Text style={styles.profileName}>
+          {user?.name || "User"}
+        </Text>
+
+        <Text style={styles.profileEmail}>
+          {user?.email ||
+            "username@email.com"}
+        </Text>
+
+        <View style={styles.statsRow}>
+
+          <Stat
+            label="RECEIPTS"
+            value="142"
+          />
+
+          <Stat
+            label="TOTAL SPENT"
+            value="₱22,340"
+          />
+
+          <Stat
+            label="DAYS ACTIVE"
+            value="18"
+          />
+
+        </View>
+
+        <Text style={styles.profileSection}>
+          ACCOUNT
+        </Text>
+
+        <View style={styles.profileMenu}>
+
+          <ProfileOption
+            icon="create-outline"
+            title="Edit Profile"
+          />
+
+          <ProfileOption
+            icon="options-outline"
+            title="Preferences"
+          />
+
+          <ProfileOption
+            icon="shield-checkmark-outline"
+            title="Security"
+          />
+
+        </View>
+
+        <Text style={styles.profileSection}>
+          SUPPORT
+        </Text>
+
+        <View style={styles.profileMenu}>
+
+          <ProfileOption
+            icon="help-circle-outline"
+            title="Help & Support"
+          />
+
+        </View>
+
+        {/* FIXED LOGOUT BUTTON */}
+
+        <TouchableOpacity
+          style={styles.logoutButton}
+          activeOpacity={0.7}
+          onPress={handleLogout}
+        >
+
+          <Ionicons
+            name="log-out-outline"
+            size={20}
+            color={COLORS.red}
+          />
+
+          <Text style={styles.logoutText}>
+            Log Out
+          </Text>
+
+        </TouchableOpacity>
+
+      </ScrollView>
+
+      <BottomNavigation
+        active="profile"
+        onNavigate={onNavigate}
+      />
+
+    </View>
+  );
+}
+
+/* =========================================================
+   PROFILE STAT
+========================================================= */
+
+function Stat({
+  label,
+  value,
+}) {
+  return (
+    <View style={styles.statBox}>
+
+      <Text style={styles.statValue}>
+        {value}
+      </Text>
+
+      <Text style={styles.statLabel}>
+        {label}
+      </Text>
+
+    </View>
+  );
+}
+
+/* =========================================================
+   PROFILE OPTION
+========================================================= */
+
+function ProfileOption({
+  icon,
+  title,
+}) {
+  return (
+    <TouchableOpacity
+      style={styles.profileOption}
+      onPress={() =>
+        Alert.alert(
+          title,
+          `${title} settings will be available here.`
+        )
+      }
+    >
+
+      <View style={styles.profileOptionLeft}>
+
+        <Ionicons
+          name={icon}
+          size={20}
+          color={COLORS.lightGray}
+        />
+
+        <Text style={styles.profileOptionText}>
+          {title}
+        </Text>
+
+      </View>
+
+      <Ionicons
+        name="chevron-forward"
+        size={19}
+        color={COLORS.gray}
+      />
+
+    </TouchableOpacity>
+  );
+}
+
+/* =========================================================
+   BOTTOM NAVIGATION
+========================================================= */
+
+function BottomNavigation({
+  active,
+  onNavigate,
+}) {
+  return (
+    <View style={styles.bottomNav}>
+
+      <NavItem
+        icon="home-outline"
+        activeIcon="home"
+        active={
+          active === "dashboard"
+        }
+        onPress={() =>
+          onNavigate("dashboard")
+        }
+      />
+
+      <NavItem
+        icon="list-outline"
+        activeIcon="list"
+        active={
+          active === "records"
+        }
+        onPress={() =>
+          onNavigate("records")
+        }
+      />
+
+      <NavItem
+        icon="person-outline"
+        activeIcon="person"
+        active={
+          active === "profile"
+        }
+        onPress={() =>
+          onNavigate("profile")
+        }
+      />
+
+    </View>
+  );
+}
+
+function NavItem({
+  icon,
+  activeIcon,
+  active,
+  onPress,
+}) {
+  return (
+    <TouchableOpacity
+      style={styles.navItem}
+      onPress={onPress}
+    >
+
+      <Ionicons
+        name={
+          active
+            ? activeIcon
+            : icon
+        }
+        size={24}
+        color={
+          active
+            ? COLORS.green
+            : COLORS.gray
+        }
+      />
+
+    </TouchableOpacity>
+  );
+}
+
+/* =========================================================
+   MOBILE MENU
+========================================================= */
+
+function MobileMenu({
+  visible,
+  onClose,
+  onNavigate,
+}) {
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent={false}
+      onRequestClose={onClose}
+    >
+
+      <SafeAreaView
+        style={styles.menuScreen}
+      >
+
+        <View style={styles.menuHeader}>
+
+          <Text style={styles.logo}>
+            RECEIPT
+            <Text style={styles.logoGreen}>
+              IQ
+            </Text>
+          </Text>
+
+          <TouchableOpacity
+            onPress={onClose}
+          >
+
+            <Ionicons
+              name="close"
+              size={34}
+              color={COLORS.white}
+            />
+
+          </TouchableOpacity>
+
+        </View>
+
+        <View style={styles.menuDivider} />
+
+        <MenuItem
+          title="Features"
+          onPress={() =>
+            Alert.alert(
+              "Features",
+              "Receipt scanning, expense categorization, reports, search and spending analysis."
+            )
+          }
+        />
+
+        <MenuItem
+          title="Pricing"
+          onPress={() =>
+            Alert.alert(
+              "Pricing",
+              "ReceiptIQ is currently free during development."
+            )
+          }
+        />
+
+        <MenuItem
+          title="Customers"
+          onPress={() =>
+            Alert.alert(
+              "Customers",
+              "Built for students, employees, families and small businesses."
+            )
+          }
+        />
+
+        <MenuItem
+          title="About"
+          onPress={() =>
+            Alert.alert(
+              "About ReceiptIQ",
+              "ReceiptIQ helps users capture, organize and understand their expenses."
+            )
+          }
+        />
+
+        <View style={styles.menuBottom}>
+
+          <Tag text="EXPENSE MANAGEMENT, ITEMIZED" />
+
+          <PrimaryButton
+            title="Get Started Free"
+            onPress={() =>
+              onNavigate("create")
+            }
+          />
+
+          <TouchableOpacity
+            style={styles.signInBottom}
+            onPress={() =>
+              onNavigate("signin")
+            }
+          >
+
+            <Text style={styles.signInText}>
+              Sign In
+            </Text>
+
+          </TouchableOpacity>
+
+        </View>
+
+      </SafeAreaView>
+
+    </Modal>
+  );
+}
+
+function MenuItem({
+  title,
+  onPress,
+}) {
+  return (
+    <TouchableOpacity
+      style={styles.menuItem}
+      onPress={onPress}
+    >
+
+      <Text style={styles.menuItemText}>
+        {title}
+      </Text>
+
+      <Ionicons
+        name="chevron-forward"
+        size={23}
+        color={COLORS.lightGray}
+      />
+
+    </TouchableOpacity>
+  );
+}
+
+/* =========================================================
+   ADD EXPENSE MODAL
+========================================================= */
+
+function AddExpenseModal({
+  visible,
+  onClose,
+  onAdd,
+}) {
+  const [store, setStore] =
+    useState("");
+
+  const [amount, setAmount] =
+    useState("");
+
+  const [category, setCategory] =
+    useState("Shopping");
+
+  const [receiptImage, setReceiptImage] =
+    useState(null);
+
+  /* =======================================================
+     TAKE PHOTO
+  ======================================================= */
+
+  const takePhoto = async () => {
+
+    try {
+
+      const permission =
+        await ImagePicker.requestCameraPermissionsAsync();
+
+      if (!permission.granted) {
+
+        Alert.alert(
+          "Camera Permission",
+          "Please allow camera access in your iPhone Settings."
+        );
+
+        return;
+      }
+
+      const result =
+        await ImagePicker.launchCameraAsync({
+          mediaTypes:
+            ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [4, 3],
+          quality: 0.8,
+        });
+
+      if (!result.canceled) {
+
+        setReceiptImage(
+          result.assets[0].uri
+        );
+
+      }
+
+    } catch (error) {
+
+      console.log(
+        "Camera error:",
+        error
+      );
+
+      Alert.alert(
+        "Camera Error",
+        "Unable to open the camera."
+      );
+    }
+  };
+
+  /* =======================================================
+     PHOTO LIBRARY
+  ======================================================= */
+
+  const chooseFromLibrary =
+    async () => {
+
+      try {
+
+        const permission =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+        if (!permission.granted) {
+
+          Alert.alert(
+            "Photo Permission",
+            "Please allow photo access in your iPhone Settings."
+          );
+
+          return;
+        }
+
+        const result =
+          await ImagePicker.launchImageLibraryAsync({
+            mediaTypes:
+              ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [4, 3],
+            quality: 0.8,
+          });
+
+        if (!result.canceled) {
+
+          setReceiptImage(
+            result.assets[0].uri
+          );
+
+        }
+
+      } catch (error) {
+
+        console.log(
+          "Photo library error:",
+          error
+        );
+
+        Alert.alert(
+          "Photo Error",
+          "Unable to open your photo library."
+        );
+      }
+    };
+
+  /* =======================================================
+     PHOTO OPTIONS
+  ======================================================= */
+
+  const showPhotoOptions =
+    () => {
+
+      Alert.alert(
+        "Receipt Photo",
+        "Choose an option",
+        [
+          {
+            text: "Take Photo",
+            onPress: takePhoto,
+          },
+          {
+            text: "Choose from Photos",
+            onPress:
+              chooseFromLibrary,
+          },
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+        ]
+      );
+    };
+
+  /* =======================================================
+     SAVE EXPENSE
+  ======================================================= */
+
+  const submit = () => {
+
+    if (!store.trim()) {
+
+      Alert.alert(
+        "Missing Information",
+        "Enter the store or description."
+      );
+
+      return;
+    }
+
+    if (!amount.trim()) {
+
+      Alert.alert(
+        "Missing Amount",
+        "Enter the expense amount."
+      );
+
+      return;
+    }
+
+    const numericAmount =
+      Number(
+        amount.replace(/,/g, "")
+      );
+
+    if (
+      Number.isNaN(numericAmount) ||
+      numericAmount <= 0
+    ) {
+
+      Alert.alert(
+        "Invalid Amount",
+        "Please enter a valid amount."
+      );
+
+      return;
+    }
+
+    onAdd({
+      name: store.trim(),
+      amount: numericAmount,
+      category,
+      image: receiptImage,
+    });
+
+    setStore("");
+    setAmount("");
+    setCategory("Shopping");
+    setReceiptImage(null);
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+
+      <KeyboardAvoidingView
+        style={styles.modalOverlay}
+        behavior={
+          Platform.OS === "ios"
+            ? "padding"
+            : undefined
+        }
+      >
+
+        <View style={styles.modalCard}>
+
+          <View style={styles.modalHeader}>
+
+            <Text style={styles.modalTitle}>
+              Add Expense
+            </Text>
+
+            <TouchableOpacity
+              onPress={onClose}
+            >
+
+              <Ionicons
+                name="close"
+                size={27}
+                color={COLORS.white}
+              />
+
+            </TouchableOpacity>
+
+          </View>
+
+          {/* RECEIPT IMAGE */}
+
+          {receiptImage && (
+            <View
+              style={
+                styles.receiptImageContainer
+              }
+            >
+
+              <Image
+                source={{
+                  uri: receiptImage,
+                }}
+                style={styles.receiptImage}
+              />
+
+              <TouchableOpacity
+                style={styles.removePhoto}
+                onPress={() =>
+                  setReceiptImage(null)
+                }
+              >
+
+                <Ionicons
+                  name="close"
+                  size={17}
+                  color={COLORS.white}
+                />
+
+              </TouchableOpacity>
+
+            </View>
+          )}
+
+          <Text style={styles.modalLabel}>
+            Store / Description
+          </Text>
+
+          <TextInput
+            style={styles.modalInput}
+            value={store}
+            onChangeText={setStore}
+            placeholder="e.g. Jollibee"
+            placeholderTextColor="#66676E"
+          />
+
+          <Text style={styles.modalLabel}>
+            Amount
+          </Text>
+
+          <TextInput
+            style={styles.modalInput}
+            value={amount}
+            onChangeText={setAmount}
+            placeholder="e.g. 250"
+            placeholderTextColor="#66676E"
+            keyboardType="decimal-pad"
+          />
+
+          <Text style={styles.modalLabel}>
+            Category
+          </Text>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{
+              marginBottom: 18,
+            }}
+          >
+
+            {[
+              "Shopping",
+              "Food & Dining",
+              "Entertainment",
+              "Transportation",
+            ].map((item) => (
+
+              <TouchableOpacity
+                key={item}
+                style={[
+                  styles.categoryButton,
+                  category === item &&
+                    styles.categoryButtonActive,
+                ]}
+                onPress={() =>
+                  setCategory(item)
+                }
+              >
+
+                <Text
+                  style={[
+                    styles.categoryButtonText,
+                    category === item &&
+                      styles.categoryButtonTextActive,
+                  ]}
+                >
+                  {item}
+                </Text>
+
+              </TouchableOpacity>
+
+            ))}
+
+          </ScrollView>
+
+          {/* CAMERA BUTTON */}
+
+          <TouchableOpacity
+            style={styles.scanPhotoButton}
+            onPress={showPhotoOptions}
+          >
+
+            <Ionicons
+              name="camera-outline"
+              size={20}
+              color={COLORS.green}
+            />
+
+            <Text style={styles.scanPhotoText}>
+              {receiptImage
+                ? "Change Receipt Photo"
+                : "Scan / Take Photo"}
+            </Text>
+
+          </TouchableOpacity>
+
+          <PrimaryButton
+            title="Save Expense"
+            onPress={submit}
+          />
+
+        </View>
+
+      </KeyboardAvoidingView>
+
+    </Modal>
+  );
+}
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+function PrimaryButton({
+  title,
+  onPress,
+}) {
+  return (
+    <TouchableOpacity
+      style={styles.primaryButton}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+
+      <Text style={styles.primaryButtonText}>
+        {title}
+      </Text>
+
+    </TouchableOpacity>
+  );
+}
+
+function SecondaryButton({
+  title,
+  onPress,
+}) {
+  return (
+    <TouchableOpacity
+      style={styles.secondaryButton}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+
+      <Text style={styles.secondaryButtonText}>
+        {title}
+      </Text>
+
+    </TouchableOpacity>
+  );
+}
+
+function SectionTitle({
+  title,
+  action,
+}) {
+  return (
+    <View style={styles.sectionHeader}>
+
+      <Text style={styles.sectionTitle}>
+        {title}
+      </Text>
+
+      <Text style={styles.sectionAction}>
+        {action}
+      </Text>
+
+    </View>
+  );
+}
+
+/* =========================================================
    STYLES
-===================================================== */
+========================================================= */
 
 const styles = StyleSheet.create({
 
-  /* ================================================
-     GENERAL
-  ================================================ */
+  safeArea: {
+    flex: 1,
+    backgroundColor: COLORS.black,
+  },
 
   container: {
     flex: 1,
-    backgroundColor: BG,
+    backgroundColor: COLORS.black,
   },
 
-
-  /* ================================================
-     LOGIN / REGISTER
-  ================================================ */
-
-  authTop: {
-    height: "41%",
-    backgroundColor: NAVY,
-    paddingHorizontal: 25,
-    paddingTop: 20,
-  },
-
-
-  fakeLogo: {
-    width: 34,
-    height: 34,
-    backgroundColor: "#242432",
-    borderRadius: 7,
-    marginBottom: 20,
-  },
-
-
-  menuIcon: {
-    position: "absolute",
-    right: 20,
-    top: 20,
-  },
-
-
-  authHeading: {
-    color: WHITE,
-    fontSize: 20,
-    lineHeight: 25,
-    marginTop: 25,
-    fontWeight: "400",
-  },
-
-
-  authBottom: {
-    backgroundColor: DARK,
+  page: {
     flex: 1,
-    paddingHorizontal: 30,
-    paddingTop: 15,
+    backgroundColor: COLORS.black,
   },
 
+  /* HEADER */
 
-  authTitle: {
-    color: WHITE,
-    fontSize: 21,
-    textAlign: "center",
-    fontWeight: "800",
-    fontFamily: "serif",
-    marginBottom: 10,
-  },
-
-
-  authSubtitle: {
-    color: "#777780",
-    textAlign: "center",
-    fontSize: 11,
-    marginBottom: 22,
-  },
-
-
-  inputContainer: {
-    marginBottom: 17,
-  },
-
-
-  inputLabel: {
-    color: WHITE,
-    fontSize: 11,
-    marginBottom: 6,
-  },
-
-
-  input: {
-    height: 32,
-    color: WHITE,
-    fontSize: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#AAAAB0",
-    paddingHorizontal: 0,
-  },
-
-
-  greenButton: {
-    width: "100%",
-    height: 42,
-    backgroundColor: GREEN,
-    borderRadius: 7,
-    justifyContent: "center",
+  header: {
+    height: 72,
+    paddingHorizontal: 25,
+    flexDirection: "row",
     alignItems: "center",
-    marginTop: 10,
+    justifyContent: "space-between",
   },
 
+  headerIcon: {
+    width: 35,
+    height: 35,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
-  greenButtonText: {
-    color: "#101015",
-    fontSize: 14,
+  logo: {
+    fontSize: 15,
+    color: COLORS.white,
+    letterSpacing: 1,
     fontWeight: "500",
   },
 
+  logoGreen: {
+    color: COLORS.green,
+  },
 
-  accountLink: {
-    marginTop: 15,
+  /* TAG */
+
+  tag: {
+    flexDirection: "row",
     alignItems: "center",
-  },
-
-
-  accountText: {
-    color: WHITE,
-    fontSize: 11,
-  },
-
-
-  /* ================================================
-     SETUP
-  ================================================ */
-
-  setupTop: {
-    height: "41%",
-    backgroundColor: NAVY,
-    padding: 25,
-    justifyContent: "flex-start",
-  },
-
-
-  setupHeading: {
-    color: WHITE,
-    fontSize: 21,
-    lineHeight: 27,
-  },
-
-
-  setupBottom: {
-    flex: 1,
-    backgroundColor: DARK,
-    paddingHorizontal: 20,
-    paddingTop: 15,
-  },
-
-
-  setupDescription: {
-    color: "#777780",
-    textAlign: "center",
-    fontSize: 11,
     marginBottom: 25,
   },
 
-
-  setupOption: {
-    backgroundColor: NAVY,
-    minHeight: 48,
-    borderRadius: 7,
-    marginBottom: 18,
-    paddingHorizontal: 13,
-    flexDirection: "row",
-    alignItems: "center",
+  diamond: {
+    width: 12,
+    height: 12,
+    borderWidth: 1.3,
+    borderColor: COLORS.green,
+    transform: [
+      {
+        rotate: "45deg",
+      },
+    ],
+    marginRight: 10,
   },
 
-
-  setupOptionTitle: {
-    color: WHITE,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-
-
-  setupOptionSubtitle: {
-    color: WHITE,
-    fontSize: 10,
-  },
-
-
-  /* ================================================
-     DASHBOARD
-  ================================================ */
-
-  dashboardHeader: {
-    backgroundColor: NAVY,
-    height: 188,
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
-    padding: 20,
-  },
-
-
-  dashboardMenu: {
-    position: "absolute",
-    left: 20,
-    top: 30,
-  },
-
-
-  welcomeSmall: {
-    position: "absolute",
-    left: 70,
-    top: 30,
-    color: "#AAAAC5",
-    fontSize: 11,
-  },
-
-
-  dashboardUser: {
-    position: "absolute",
-    left: 70,
-    top: 52,
-    color: WHITE,
-    fontSize: 18,
-    fontWeight: "700",
-  },
-
-
-  avatar: {
-    position: "absolute",
-    right: 22,
-    top: 38,
-    width: 43,
-    height: 43,
-    borderRadius: 23,
-    backgroundColor: "#DDD",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-
-  balanceLabel: {
-    position: "absolute",
-    left: 20,
-    top: 83,
-    color: "#AAAAC5",
-    fontSize: 9,
-  },
-
-
-  balance: {
-    position: "absolute",
-    left: 20,
-    top: 100,
-    color: WHITE,
-    fontSize: 30,
-    fontWeight: "800",
-  },
-
-
-  balanceDecimal: {
-    color: "#AAAAC5",
-    fontSize: 16,
-  },
-
-
-  scanButton: {
-    alignItems: "center",
-    marginTop: 8,
-  },
-
-
-  scanCircle: {
-    width: 52,
-    height: 52,
-    backgroundColor: NAVY,
-    borderRadius: 30,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-
-  scanText: {
-    fontSize: 11,
-    fontWeight: "600",
-    marginTop: 2,
-  },
-
-
-  /* ================================================
-     SPENDING
-  ================================================ */
-
-  spendingCard: {
-    backgroundColor: WHITE,
-    marginHorizontal: 15,
-    marginTop: 22,
-    borderRadius: 16,
-    padding: 17,
-    elevation: 4,
-  },
-
-
-  spendingHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-
-
-  spendingTitle: {
-    fontSize: 15,
-    fontWeight: "800",
-  },
-
-
-  thisMonth: {
-    fontSize: 11,
-    fontWeight: "700",
-  },
-
-
-  chartRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 10,
-  },
-
-
-  fakeChart: {
-    width: 105,
-    height: 105,
-    borderRadius: 60,
-    borderWidth: 13,
-    borderColor: "#209B7F",
-    borderRightColor: "#3798EF",
-    borderBottomColor: "#FF9900",
-    borderLeftColor: "#B34BDB",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-
-  chartCenter: {
-    width: 70,
-    height: 70,
-    borderRadius: 40,
-    backgroundColor: WHITE,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-
-  spentLabel: {
-    color: "#888",
+  tagText: {
+    color: COLORS.green,
     fontSize: 8,
+    letterSpacing: 1,
+    fontWeight: "500",
   },
 
+  /* LANDING */
 
-  spentAmount: {
-    fontWeight: "800",
-    fontSize: 14,
-  },
-
-
-  legend: {
-    marginLeft: 18,
-  },
-
-
-  legendItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 7,
-  },
-
-
-  legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 5,
-    marginRight: 8,
-  },
-
-
-  legendText: {
-    fontSize: 11,
-  },
-
-
-  /* ================================================
-     SCAN
-  ================================================ */
-
-  simpleHeader: {
-    height: 80,
-    backgroundColor: NAVY,
-    paddingHorizontal: 18,
-    justifyContent: "flex-start",
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-
-  scanHome: {
-    flex: 1,
+  landingContent: {
     paddingHorizontal: 25,
-    paddingTop: 50,
+    paddingTop: 45,
+    paddingBottom: 40,
   },
 
-
-  darkButton: {
-    width: "100%",
-    height: 50,
-    backgroundColor: NAVY,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-
-
-  darkButtonText: {
-    color: WHITE,
-    fontSize: 12,
+  heroTitle: {
+    color: COLORS.white,
+    fontSize: 25,
+    lineHeight: 30,
     fontWeight: "700",
-  },
-
-
-  recentTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    textAlign: "center",
-    marginTop: 22,
-    marginBottom: 17,
-  },
-
-
-  recentUpload: {
-    height: 40,
-    backgroundColor: NAVY,
-    borderRadius: 17,
-    marginBottom: 6,
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-  },
-
-
-  recentHeaderText: {
-    color: WHITE,
-    fontSize: 7,
-    fontWeight: "700",
-  },
-
-
-  /* ================================================
-     CAMERA
-  ================================================ */
-
-  cameraScreen: {
-    flex: 1,
-    backgroundColor: NAVY,
-  },
-
-
-  cameraHeader: {
-    height: 75,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-  },
-
-
-  cameraTitle: {
-    color: WHITE,
-    fontSize: 16,
-    fontWeight: "800",
-  },
-
-
-  cameraFrame: {
-    height: width * 0.75,
-    marginHorizontal: 20,
-    borderWidth: 3,
-    borderColor: WHITE,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-
-  receiptPreview: {
-    width: "85%",
-    height: "88%",
-    backgroundColor: "#F2F3F7",
-    padding: 15,
-  },
-
-
-  receiptStore: {
-    textAlign: "center",
-    fontSize: 15,
-    fontWeight: "900",
-    color: "#272727",
-  },
-
-
-  receiptSmall: {
-    textAlign: "center",
-    fontSize: 7,
-    color: "#777",
-  },
-
-
-  receiptCenter: {
-    textAlign: "center",
-    fontSize: 8,
-    fontWeight: "800",
     marginBottom: 12,
-    color: "#333",
   },
 
-
-  receiptLine: {
-    borderBottomWidth: 1,
-    borderStyle: "dashed",
-    borderBottomColor: "#DDD",
-    marginVertical: 8,
-  },
-
-
-  receiptItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 6,
-  },
-
-
-  receiptItemName: {
-    fontSize: 7,
-    color: "#444",
-  },
-
-
-  receiptItemPrice: {
-    fontSize: 7,
-    color: "#444",
-  },
-
-
-  receiptTotal: {
-    fontSize: 9,
-    fontWeight: "900",
-    color: "#333",
-  },
-
-
-  thankYou: {
-    textAlign: "center",
-    fontSize: 8,
-    fontWeight: "700",
-    marginTop: 20,
-  },
-
-
-  alignText: {
-    color: WHITE,
-    textAlign: "center",
-    marginTop: 28,
+  heroDescription: {
+    color: "#73747B",
     fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 30,
   },
 
-
-  cameraActions: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 17,
-    marginTop: 15,
-  },
-
-
-  cameraActionButton: {
-    borderWidth: 1,
-    borderColor: WHITE,
-    borderRadius: 10,
-    height: 40,
-    width: "47%",
-    justifyContent: "center",
+  primaryButton: {
+    height: 45,
+    borderRadius: 23,
+    backgroundColor: COLORS.green,
     alignItems: "center",
-    flexDirection: "row",
+    justifyContent: "center",
+    marginBottom: 9,
   },
 
-
-  cameraActionText: {
-    color: WHITE,
+  primaryButtonText: {
+    color: "#07120F",
+    fontSize: 13,
     fontWeight: "700",
-    marginLeft: 6,
   },
 
-
-  deleteScan: {
-    backgroundColor: "#FFE7E8",
-    borderRadius: 10,
-    height: 40,
-    width: "47%",
-    justifyContent: "center",
-    alignItems: "center",
-    flexDirection: "row",
-  },
-
-
-  deleteText: {
-    color: RED,
-    fontWeight: "700",
-    marginLeft: 5,
-  },
-
-
-  cameraBottom: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    marginTop: 24,
-  },
-
-
-  roundIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 25,
-    backgroundColor: "#171742",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-
-  shutter: {
-    width: 68,
-    height: 68,
-    borderRadius: 40,
-    backgroundColor: WHITE,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-
-  shutterInner: {
-    width: 59,
-    height: 59,
-    borderRadius: 35,
-    backgroundColor: NAVY,
-    borderWidth: 3,
-    borderColor: WHITE,
-  },
-
-
-  /* ================================================
-     REVIEW
-  ================================================ */
-
-  reviewHeader: {
-    height: 108,
-    backgroundColor: NAVY,
-    padding: 18,
-    flexDirection: "row",
-    alignItems: "flex-start",
-  },
-
-
-  reviewTitle: {
-    color: WHITE,
-    fontSize: 15,
-    fontWeight: "800",
-    flex: 1,
-    textAlign: "center",
-  },
-
-
-  reviewSubtitle: {
-    position: "absolute",
-    left: 18,
-    bottom: 14,
-    color: "#AAAAC5",
-    fontSize: 10,
-  },
-
-
-  reviewBody: {
-    flex: 1,
-    backgroundColor: WHITE,
-    padding: 17,
-  },
-
-
-  extractedCard: {
-    backgroundColor: "#E6FAFA",
-    borderWidth: 1,
-    borderColor: "#20BDB4",
-    borderRadius: 11,
-    minHeight: 125,
+  secondaryButton: {
+    height: 45,
+    borderRadius: 23,
+    borderWidth: 1.5,
+    borderColor: "#74747A",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 15,
   },
 
-
-  storeName: {
-    color: "#777",
-    marginTop: 4,
-    fontSize: 10,
+  secondaryButtonText: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: "600",
   },
 
+  signInBottom: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 8,
+  },
 
-  extractedAmount: {
-    fontSize: 27,
-    fontWeight: "900",
+  signInText: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+
+  footerText: {
+    color: COLORS.white,
+    fontSize: 9,
+  },
+
+  greenText: {
+    color: COLORS.green,
+    fontSize: 9,
+    fontWeight: "600",
+  },
+
+  /* RECEIPT */
+
+  receiptWrapper: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 20,
+  },
+
+  receipt: {
+    width: 200,
+    minHeight: 300,
+    backgroundColor: "#F5F5F5",
+    padding: 15,
+    transform: [
+      {
+        rotate: "6deg",
+      },
+    ],
+    elevation: 8,
+  },
+
+  receiptTitle: {
     color: "#222",
+    textAlign: "center",
+    fontSize: 9,
+    fontWeight: "700",
+    marginBottom: 8,
   },
 
-
-  extractedText: {
-    color: "#777",
+  receiptNumber: {
+    color: "#222",
     fontSize: 8,
     textAlign: "center",
-    marginTop: 4,
+    marginVertical: 5,
   },
 
-
-  reviewRow: {
-    minHeight: 39,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E5E5",
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 10,
+  receiptLine: {
+    borderTopWidth: 1,
+    borderColor: "#777",
+    borderStyle: "dashed",
+    marginVertical: 7,
   },
 
-
-  reviewLabel: {
-    color: "#737981",
-    fontSize: 11,
-    marginLeft: 10,
-  },
-
-
-  reviewValue: {
-    color: "#252525",
-    fontSize: 11,
-    fontWeight: "700",
-    marginRight: 8,
-  },
-
-
-  editDeleteRow: {
+  receiptRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-  },
-
-
-  editButton: {
-    width: "48%",
-    height: 40,
-    borderWidth: 1,
-    borderColor: NAVY,
-    borderRadius: 9,
-    justifyContent: "center",
-    alignItems: "center",
-    flexDirection: "row",
-  },
-
-
-  editText: {
-    color: NAVY,
-    fontWeight: "700",
-    marginLeft: 5,
-  },
-
-
-  deleteButton: {
-    width: "48%",
-    height: 40,
-    borderWidth: 1,
-    borderColor: RED,
-    backgroundColor: "#FFE7E8",
-    borderRadius: 9,
-    justifyContent: "center",
-    alignItems: "center",
-    flexDirection: "row",
-  },
-
-
-  /* ================================================
-     EDIT
-  ================================================ */
-
-  editHeaderTitle: {
-    color: WHITE,
-    fontSize: 17,
-    fontWeight: "800",
-    marginLeft: 20,
-  },
-
-
-  editInputContainer: {
-    marginBottom: 20,
-  },
-
-
-  editLabel: {
-    color: "#666",
-    fontSize: 12,
     marginBottom: 6,
   },
 
-
-  editInput: {
-    height: 45,
-    borderWidth: 1,
-    borderColor: "#CCC",
-    borderRadius: 8,
-    paddingHorizontal: 12,
+  receiptText: {
     color: "#222",
-    backgroundColor: WHITE,
+    fontSize: 8,
   },
 
-
-  /* ================================================
-     ANIMATED SIDEBAR
-  ================================================ */
-
-  drawerOverlay: {
-    position: "absolute",
-
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-
-    zIndex: 1000,
+  receiptDate: {
+    color: "#222",
+    fontSize: 7,
+    marginTop: 12,
+    textAlign: "center",
   },
 
+  /* HOW */
 
-  /*
-   * Dark background behind sidebar
-   */
-
-  drawerBackdrop: {
-    position: "absolute",
-
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-
-    backgroundColor: "#000000",
+  howContent: {
+    paddingHorizontal: 25,
+    paddingTop: 25,
+    paddingBottom: 35,
   },
 
-
-  /*
-   * Actual sidebar
-   */
-
-  drawer: {
-    position: "absolute",
-
-    left: 0,
-    top: 0,
-    bottom: 0,
-
-    width: width * 0.47,
-
-    backgroundColor: NAVY,
-
-    paddingHorizontal: 15,
-    paddingTop: 30,
-
-    borderTopRightRadius: 15,
-    borderBottomRightRadius: 15,
-
-    elevation: 15,
-
-    shadowColor: "#000",
-
-    shadowOffset: {
-      width: 4,
-      height: 0,
-    },
-
-    shadowOpacity: 0.3,
-
-    shadowRadius: 8,
+  howTitle: {
+    color: COLORS.white,
+    fontSize: 22,
+    lineHeight: 25,
+    fontWeight: "700",
+    marginBottom: 12,
   },
 
+  stepCard: {
+    backgroundColor: COLORS.card,
+    minHeight: 87,
+    borderRadius: 17,
+    marginBottom: 10,
+    padding: 13,
+    flexDirection: "row",
+  },
 
-  drawerTop: {
-    height: 60,
-
+  stepIcon: {
+    width: 45,
+    alignItems: "center",
     justifyContent: "center",
   },
 
+  stepContent: {
+    flex: 1,
+    paddingLeft: 5,
+  },
 
-  closeButton: {
+  stepNumber: {
+    color: COLORS.green,
+    fontSize: 8,
+    letterSpacing: 1,
+    marginBottom: 3,
+  },
+
+  stepTitle: {
+    color: COLORS.white,
+    fontSize: 11,
+    fontWeight: "700",
+    marginBottom: 5,
+  },
+
+  stepDescription: {
+    color: "#777880",
+    fontSize: 8,
+    lineHeight: 11,
+  },
+
+  /* AUTH */
+
+  authTop: {
+    backgroundColor: COLORS.black,
+    minHeight: 310,
+  },
+
+  authHero: {
+    paddingHorizontal: 36,
+    paddingTop: 40,
+  },
+
+  signinHero: {
+    paddingHorizontal: 36,
+    paddingTop: 45,
+  },
+
+  authHeroTitle: {
+    color: COLORS.white,
+    fontSize: 20,
+    lineHeight: 25,
+    fontWeight: "700",
+    marginBottom: 18,
+  },
+
+  authPanel: {
+    flex: 1,
+    backgroundColor: COLORS.card,
+    paddingHorizontal: 36,
+    paddingTop: 35,
+    minHeight: 390,
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+  },
+
+  authTitle: {
+    color: COLORS.white,
+    fontSize: 17,
+    fontWeight: "800",
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+
+  authSubtitle: {
+    color: "#777880",
+    fontSize: 9,
+    marginBottom: 27,
+  },
+
+  inputContainer: {
+    marginBottom: 18,
+  },
+
+  inputLabel: {
+    color: COLORS.lightGray,
+    fontSize: 9,
+    marginBottom: 7,
+  },
+
+  input: {
+    height: 40,
+    borderBottomWidth: 1,
+    borderBottomColor: "#777880",
+    color: COLORS.white,
+    fontSize: 13,
+    paddingVertical: 0,
+  },
+
+  authFooter: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 5,
+  },
+
+  /* DASHBOARD */
+
+  dashboardPage: {
+    flex: 1,
+    backgroundColor: COLORS.navy,
+  },
+
+  dashboardHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 25,
+    paddingBottom: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  welcomeSmall: {
+    color: COLORS.lightGray,
+    fontSize: 9,
+    marginBottom: 4,
+  },
+
+  dashboardUser: {
+    color: COLORS.white,
+    fontSize: 19,
+    fontWeight: "700",
+  },
+
+  balanceCard: {
+    backgroundColor: COLORS.card,
+    marginHorizontal: 20,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 10,
+  },
+
+  balanceLabel: {
+    color: "#777880",
+    fontSize: 7,
+    letterSpacing: 1,
+  },
+
+  balanceAmount: {
+    color: COLORS.white,
+    fontSize: 25,
+    fontWeight: "800",
+    marginTop: 5,
+  },
+
+  balanceHint: {
+    color: COLORS.green,
+    fontSize: 7,
+    marginTop: 5,
+  },
+
+  quickActions: {
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    marginBottom: 22,
+  },
+
+  quickAction: {
+    flex: 1,
+    height: 55,
+    backgroundColor: COLORS.card,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: 4,
+  },
+
+  quickActionText: {
+    color: COLORS.lightGray,
+    fontSize: 8,
+    marginTop: 4,
+  },
+
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    marginBottom: 9,
+  },
+
+  sectionTitle: {
+    color: COLORS.white,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+
+  sectionAction: {
+    color: COLORS.green,
+    fontSize: 7,
+  },
+
+  /* CHART */
+
+  chartCard: {
+    backgroundColor: COLORS.card,
+    marginHorizontal: 20,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 22,
+  },
+
+  chartHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+
+  chartTitle: {
+    color: COLORS.white,
+    fontSize: 9,
+    fontWeight: "600",
+  },
+
+  chartMonth: {
+    color: COLORS.green,
+    fontSize: 7,
+  },
+
+  chartRow: {
+    marginBottom: 9,
+  },
+
+  chartLabelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+
+  chartCategory: {
+    color: COLORS.lightGray,
+    fontSize: 7,
+  },
+
+  chartAmount: {
+    color: "#888990",
+    fontSize: 7,
+  },
+
+  progressBackground: {
+    height: 4,
+    backgroundColor: "#292A31",
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+
+  progressBar: {
+    height: "100%",
+    borderRadius: 3,
+  },
+
+  /* TRANSACTIONS */
+
+  recentHeader: {
+    paddingHorizontal: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+
+  viewAll: {
+    color: COLORS.green,
+    fontSize: 8,
+  },
+
+  recentContainer: {
+    marginHorizontal: 20,
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+  },
+
+  transaction: {
+    minHeight: 62,
+    flexDirection: "row",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: "#272830",
+    paddingHorizontal: 4,
+  },
+
+  transactionIcon: {
     width: 38,
     height: 38,
-
-    justifyContent: "center",
+    borderRadius: 10,
+    backgroundColor: "#202129",
     alignItems: "center",
-
-    borderRadius: 20,
+    justifyContent: "center",
+    marginRight: 10,
   },
 
-
-  drawerButton: {
-    backgroundColor: "#F0F0F0",
-
-    height: 43,
-
-    borderRadius: 22,
-
-    marginBottom: 10,
-
-    flexDirection: "row",
-
-    alignItems: "center",
-
-    justifyContent: "center",
-
-    elevation: 2,
+  transactionInfo: {
+    flex: 1,
   },
 
-
-  drawerButtonText: {
-    color: NAVY,
-
+  transactionName: {
+    color: COLORS.white,
     fontSize: 10,
+    fontWeight: "600",
+    marginBottom: 3,
+  },
 
+  transactionCategory: {
+    color: "#73747B",
+    fontSize: 7,
+  },
+
+  transactionAmount: {
+    color: COLORS.white,
+    fontSize: 9,
+    fontWeight: "600",
+  },
+
+  /* RECORDS */
+
+  recordsTitle: {
+    color: COLORS.white,
+    fontSize: 20,
     fontWeight: "700",
+    marginHorizontal: 20,
+    marginTop: 22,
+    marginBottom: 15,
+  },
 
+  searchBox: {
+    marginHorizontal: 20,
+    height: 38,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#2C2D35",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+  },
+
+  searchInput: {
+    flex: 1,
+    color: COLORS.white,
+    fontSize: 10,
+    marginHorizontal: 8,
+  },
+
+  filters: {
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    marginBottom: 10,
+  },
+
+  filterButton: {
+    backgroundColor: COLORS.card,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+    borderRadius: 12,
+    marginRight: 5,
+  },
+
+  filterButtonActive: {
+    backgroundColor: COLORS.green,
+  },
+
+  filterText: {
+    color: "#85868D",
+    fontSize: 6,
+  },
+
+  filterTextActive: {
+    color: COLORS.black,
+    fontWeight: "700",
+  },
+
+  dateHeading: {
+    color: COLORS.green,
+    fontSize: 7,
+    letterSpacing: 1,
+    marginHorizontal: 20,
+    marginBottom: 6,
+    marginTop: 8,
+  },
+
+  emptyText: {
+    color: COLORS.gray,
+    textAlign: "center",
+    marginTop: 40,
+    fontSize: 11,
+  },
+
+  floatingButton: {
+    position: "absolute",
+    right: 20,
+    bottom: 85,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: COLORS.green,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 5,
+  },
+
+  /* PROFILE */
+
+  profileTitle: {
+    color: COLORS.white,
+    fontSize: 20,
+    fontWeight: "700",
+    marginHorizontal: 20,
+    marginTop: 22,
+  },
+
+  profileAvatar: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    borderWidth: 1.5,
+    borderColor: COLORS.green,
+    alignSelf: "center",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 20,
+  },
+
+  profileName: {
+    color: COLORS.white,
+    textAlign: "center",
+    fontSize: 14,
+    fontWeight: "700",
+    marginTop: 9,
+  },
+
+  profileEmail: {
+    color: "#73747B",
+    textAlign: "center",
+    fontSize: 8,
+    marginTop: 4,
+  },
+
+  statsRow: {
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    marginTop: 18,
+    marginBottom: 24,
+  },
+
+  statBox: {
+    flex: 1,
+    backgroundColor: COLORS.card,
+    borderRadius: 8,
+    paddingVertical: 11,
+    alignItems: "center",
+    marginHorizontal: 4,
+  },
+
+  statValue: {
+    color: COLORS.white,
+    fontSize: 10,
+    fontWeight: "700",
+  },
+
+  statLabel: {
+    color: "#777880",
+    fontSize: 6,
+    marginTop: 4,
+  },
+
+  profileSection: {
+    color: COLORS.green,
+    fontSize: 7,
+    letterSpacing: 1,
+    marginHorizontal: 20,
+    marginBottom: 7,
+  },
+
+  profileMenu: {
+    backgroundColor: COLORS.card,
+    borderRadius: 10,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    paddingHorizontal: 12,
+  },
+
+  profileOption: {
+    height: 46,
+    borderBottomWidth: 1,
+    borderBottomColor: "#292A31",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  profileOptionLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  profileOptionText: {
+    color: COLORS.lightGray,
+    fontSize: 9,
+    marginLeft: 10,
+  },
+
+  /* LOGOUT */
+
+  logoutButton: {
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 1,
+    borderColor: COLORS.red,
+    marginHorizontal: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 5,
+  },
+
+  logoutText: {
+    color: COLORS.red,
+    fontSize: 10,
+    fontWeight: "700",
     marginLeft: 8,
   },
 
+  /* BOTTOM NAV */
 
-  /* ================================================
-     PLACEHOLDER
-  ================================================ */
+  bottomNav: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 62,
+    backgroundColor: "#101117",
+    borderTopWidth: 1,
+    borderTopColor: "#282931",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+    paddingBottom:
+      Platform.OS === "ios" ? 5 : 0,
+  },
 
-  placeholderPage: {
-    flex: 1,
-
+  navItem: {
+    width: 70,
+    height: 50,
+    alignItems: "center",
     justifyContent: "center",
+  },
 
+  /* MENU */
+
+  menuScreen: {
+    flex: 1,
+    backgroundColor: COLORS.black,
+    paddingHorizontal: 25,
+  },
+
+  menuHeader: {
+    height: 72,
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
   },
 
-
-  placeholderTitle: {
-    fontSize: 26,
-
-    fontWeight: "800",
-
-    color: NAVY,
+  menuDivider: {
+    height: 1,
+    backgroundColor: "#2B2C32",
+    marginBottom: 4,
   },
 
+  menuItem: {
+    height: 57,
+    borderBottomWidth: 1,
+    borderBottomColor: "#55565C",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 10,
+  },
 
-  placeholderText: {
-    color: GRAY,
+  menuItemText: {
+    color: COLORS.white,
+    fontSize: 14,
+  },
 
-    marginTop: 10,
+  menuBottom: {
+    position: "absolute",
+    left: 25,
+    right: 25,
+    bottom: 30,
+  },
+
+  /* MODAL */
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor:
+      "rgba(0,0,0,0.75)",
+    justifyContent: "flex-end",
+  },
+
+  modalCard: {
+    backgroundColor: COLORS.card,
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    paddingHorizontal: 22,
+    paddingTop: 22,
+    paddingBottom: 30,
+  },
+
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 22,
+  },
+
+  modalTitle: {
+    color: COLORS.white,
+    fontSize: 18,
+    fontWeight: "700",
+  },
+
+  modalLabel: {
+    color: COLORS.lightGray,
+    fontSize: 9,
+    marginBottom: 7,
+  },
+
+  modalInput: {
+    height: 42,
+    borderWidth: 1,
+    borderColor: "#3A3B43",
+    borderRadius: 9,
+    color: COLORS.white,
+    paddingHorizontal: 12,
+    marginBottom: 15,
+    fontSize: 11,
+  },
+
+  categoryButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 15,
+    backgroundColor: "#25262E",
+    marginRight: 6,
+  },
+
+  categoryButtonActive: {
+    backgroundColor: COLORS.green,
+  },
+
+  categoryButtonText: {
+    color: COLORS.gray,
+    fontSize: 8,
+  },
+
+  categoryButtonTextActive: {
+    color: COLORS.black,
+    fontWeight: "700",
+  },
+
+  /* CAMERA */
+
+  scanPhotoButton: {
+    height: 45,
+    borderRadius: 23,
+    borderWidth: 1,
+    borderColor: COLORS.green,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+  },
+
+  scanPhotoText: {
+    color: COLORS.green,
+    fontSize: 10,
+    fontWeight: "600",
+    marginLeft: 8,
+  },
+
+  receiptImageContainer: {
+    height: 150,
+    borderRadius: 12,
+    overflow: "hidden",
+    marginBottom: 15,
+    backgroundColor: "#111218",
+  },
+
+  receiptImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+
+  removePhoto: {
+    position: "absolute",
+    right: 8,
+    top: 8,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor:
+      "rgba(0,0,0,0.75)",
+    alignItems: "center",
+    justifyContent: "center",
   },
 
 });
