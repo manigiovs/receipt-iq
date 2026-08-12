@@ -1,1097 +1,2077 @@
 import React, { useRef, useState } from "react";
+
 import {
+  SafeAreaView,
   View,
   Text,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
-  StatusBar,
-  Animated,
-  Dimensions,
+  TouchableOpacity,
+  TextInput,
   ScrollView,
+  StatusBar,
+  Dimensions,
+  Animated,
 } from "react-native";
+
+import {
+  Ionicons,
+  MaterialCommunityIcons,
+} from "@expo/vector-icons";
 
 const { width } = Dimensions.get("window");
 
-const NAVY = "#0D0B3D";
-const DARK = "#202027";
-const GREEN = "#19B394";
-const LIGHT = "#E8E8E8";
+/* =====================================================
+   COLORS
+===================================================== */
+
+const NAVY = "#0D0D32";
+const BG = "#E5E5E5";
+const DARK = "#22222B";
+const GREEN = "#209B7F";
 const WHITE = "#FFFFFF";
-const GRAY = "#888888";
+const RED = "#FF5C65";
+const GRAY = "#777780";
+
+
+/* =====================================================
+   APP
+===================================================== */
 
 export default function App() {
-  const [page, setPage] = useState("signin");
-  const [menuOpen, setMenuOpen] = useState(false);
 
-  const slide = useRef(new Animated.Value(0)).current;
+  const [screen, setScreen] = useState("login");
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const changePage = (nextPage) => {
-    setMenuOpen(false);
+  /*
+   * SIDEBAR ANIMATION
+   *
+   * 0 = closed
+   * 1 = opened
+   */
 
-    Animated.timing(slide, {
+  const drawerAnimation = useRef(
+    new Animated.Value(0)
+  ).current;
+
+
+  /* =====================================================
+     OPEN SIDEBAR
+  ===================================================== */
+
+  const openDrawer = () => {
+
+    setDrawerOpen(true);
+
+    Animated.spring(drawerAnimation, {
       toValue: 1,
-      duration: 250,
+      useNativeDriver: true,
+      tension: 70,
+      friction: 10,
+    }).start();
+
+  };
+
+
+  /* =====================================================
+     CLOSE SIDEBAR
+  ===================================================== */
+
+  const closeDrawer = () => {
+
+    Animated.timing(drawerAnimation, {
+      toValue: 0,
+      duration: 220,
       useNativeDriver: true,
     }).start(() => {
-      setPage(nextPage);
-      slide.setValue(-1);
 
-      Animated.timing(slide, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
+      setDrawerOpen(false);
+
     });
+
   };
 
-  const animatedStyle = {
-    transform: [
-      {
-        translateX: slide.interpolate({
-          inputRange: [-1, 0, 1],
-          outputRange: [-width, 0, width],
-        }),
-      },
-    ],
+
+  /* =====================================================
+     NAVIGATION
+  ===================================================== */
+
+  const navigate = (page) => {
+
+    closeDrawer();
+
+    setScreen(page);
+
   };
+
+
+  /* =====================================================
+     SIDEBAR
+  ===================================================== */
+
+  const Sidebar = () => {
+
+    if (!drawerOpen) {
+      return null;
+    }
+
+    /*
+     * Sidebar moves from -300 → 0
+     */
+
+    const drawerTranslateX =
+      drawerAnimation.interpolate({
+        inputRange: [0, 1],
+        outputRange: [-320, 0],
+      });
+
+
+    /*
+     * Background becomes darker
+     */
+
+    const overlayOpacity =
+      drawerAnimation.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0, 0.45],
+      });
+
+
+    return (
+      <View style={styles.drawerOverlay}>
+
+        {/* =============================================
+            DARK BACKGROUND
+        ============================================= */}
+
+        <Animated.View
+          style={[
+            styles.drawerBackdrop,
+            {
+              opacity: overlayOpacity,
+            },
+          ]}
+        >
+
+          <TouchableOpacity
+            style={{ flex: 1 }}
+            activeOpacity={1}
+            onPress={closeDrawer}
+          />
+
+        </Animated.View>
+
+
+        {/* =============================================
+            SLIDING SIDEBAR
+        ============================================= */}
+
+        <Animated.View
+          style={[
+            styles.drawer,
+            {
+              transform: [
+                {
+                  translateX: drawerTranslateX,
+                },
+              ],
+            },
+          ]}
+        >
+
+          {/* SIDEBAR CLOSE */}
+
+          <View style={styles.drawerTop}>
+
+            <TouchableOpacity
+              onPress={closeDrawer}
+              style={styles.closeButton}
+            >
+
+              <Ionicons
+                name="close"
+                size={25}
+                color={WHITE}
+              />
+
+            </TouchableOpacity>
+
+          </View>
+
+
+          {/* DASHBOARD */}
+
+          <DrawerButton
+            icon="grid-outline"
+            title="Dashboard"
+            onPress={() =>
+              navigate("dashboard")
+            }
+          />
+
+
+          {/* RECORDS */}
+
+          <DrawerButton
+            icon="receipt-outline"
+            title="Records"
+            onPress={() =>
+              navigate("records")
+            }
+          />
+
+
+          {/* REPORT */}
+
+          <DrawerButton
+            icon="bar-chart-outline"
+            title="Report"
+            onPress={() =>
+              navigate("report")
+            }
+          />
+
+
+          {/* PROFILE */}
+
+          <DrawerButton
+            icon="person-outline"
+            title="Profile"
+            onPress={() =>
+              navigate("profile")
+            }
+          />
+
+
+          {/* LOG OUT */}
+
+          <DrawerButton 
+            icon="log-out-outline"
+            title="Log out"
+            onPress={() =>
+              navigate("login")
+            }
+          />
+
+        </Animated.View>
+
+      </View>
+    );
+  };
+
+
+  /* =====================================================
+     LOGIN
+  ===================================================== */
+
+  if (screen === "login") {
+
+    return (
+      <ScreenWrapper>
+
+        {/* TOP */}
+
+        <View style={styles.authTop}>
+
+          <View style={styles.fakeLogo} />
+
+          <TouchableOpacity
+            style={styles.menuIcon}
+            onPress={openDrawer}
+          >
+
+            <Ionicons
+              name="menu-outline"
+              size={28}
+              color={WHITE}
+            />
+
+          </TouchableOpacity>
+
+
+          <Text style={styles.authHeading}>
+
+            Welcome Back.
+            {"\n"}
+
+            Good To See You Again.
+
+          </Text>
+
+        </View>
+
+
+        {/* BOTTOM */}
+
+        <View style={styles.authBottom}>
+
+          <Text style={styles.authTitle}>
+            SIGN IN
+          </Text>
+
+
+          <Text style={styles.authSubtitle}>
+            Enter your details to continue.
+          </Text>
+
+
+          <Input
+            label="Email"
+            placeholder="username@email.com"
+          />
+
+
+          <Input
+            label="Password"
+            placeholder="••••••••••••"
+            secure
+          />
+
+
+          <GreenButton
+            title="Sign In"
+            onPress={() =>
+              setScreen("dashboard")
+            }
+          />
+
+
+          <TouchableOpacity
+            onPress={() =>
+              setScreen("register")
+            }
+            style={styles.accountLink}
+          >
+
+            <Text style={styles.accountText}>
+
+              New here?{" "}
+
+              <Text
+                style={{
+                  fontWeight: "700",
+                }}
+              >
+                Create an Account
+              </Text>
+
+            </Text>
+
+          </TouchableOpacity>
+
+        </View>
+
+
+        <Sidebar />
+
+      </ScreenWrapper>
+    );
+  }
+
+
+  /* =====================================================
+     REGISTER
+  ===================================================== */
+
+  if (screen === "register") {
+
+    return (
+      <ScreenWrapper>
+
+        <View style={styles.authTop}>
+
+          <View style={styles.fakeLogo} />
+
+
+          <TouchableOpacity
+            style={styles.menuIcon}
+            onPress={openDrawer}
+          >
+
+            <Ionicons
+              name="menu-outline"
+              size={28}
+              color={WHITE}
+            />
+
+          </TouchableOpacity>
+
+
+          <Text style={styles.authHeading}>
+
+            Join Us.
+            {"\n"}
+
+            Start Something New
+            {"\n"}
+
+            Today.
+
+          </Text>
+
+        </View>
+
+
+        <ScrollView
+          style={styles.authBottom}
+          contentContainerStyle={{
+            paddingBottom: 30,
+          }}
+        >
+
+          <Text style={styles.authTitle}>
+            CREATE ACCOUNT
+          </Text>
+
+
+          <Text style={styles.authSubtitle}>
+            Enter your details to continue.
+          </Text>
+
+
+          <Input
+            label="Full Name"
+            placeholder="Full Name"
+          />
+
+
+          <Input
+            label="Email"
+            placeholder="username@email.com"
+          />
+
+
+          <Input
+            label="Password"
+            placeholder="••••••••••••"
+            secure
+          />
+
+
+          <GreenButton
+            title="Sign In"
+            onPress={() =>
+              setScreen("setup")
+            }
+          />
+
+
+          <TouchableOpacity
+            onPress={() =>
+              setScreen("login")
+            }
+            style={styles.accountLink}
+          >
+
+            <Text style={styles.accountText}>
+
+              Already have an account?{" "}
+
+              <Text
+                style={{
+                  fontWeight: "700",
+                }}
+              >
+                Sign In
+              </Text>
+
+            </Text>
+
+          </TouchableOpacity>
+
+        </ScrollView>
+
+
+        <Sidebar />
+
+      </ScreenWrapper>
+    );
+  }
+
+
+  /* =====================================================
+     SETUP
+  ===================================================== */
+
+  if (screen === "setup") {
+
+    return (
+      <ScreenWrapper>
+
+        <View style={styles.setupTop}>
+
+          <Text style={styles.setupHeading}>
+
+            You're In.
+            {"\n"}
+
+            Let's Get You Set Up.
+
+          </Text>
+
+        </View>
+
+
+        <View style={styles.setupBottom}>
+
+          <Text style={styles.authTitle}>
+            WELCOME, User
+          </Text>
+
+
+          <Text style={styles.setupDescription}>
+
+            Your account is ready. Here's a quick
+            {"\n"}
+            look at what you can do first.
+
+          </Text>
+
+
+          <SetupOption
+            icon="person-outline"
+            title="Complete your profile"
+            subtitle="Add Profile Photo"
+          />
+
+
+          <SetupOption
+            icon="settings-outline"
+            title="Set Your Preferences"
+            subtitle="Tailor it to how you work"
+          />
+
+
+          <GreenButton
+            title="Go to Dashboard"
+            onPress={() =>
+              setScreen("dashboard")
+            }
+          />
+
+        </View>
+
+      </ScreenWrapper>
+    );
+  }
+
+
+  /* =====================================================
+     DASHBOARD
+  ===================================================== */
+
+  if (screen === "dashboard") {
+
+    return (
+      <ScreenWrapper>
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            paddingBottom: 40,
+          }}
+        >
+
+          {/* HEADER */}
+
+          <View style={styles.dashboardHeader}>
+
+            <TouchableOpacity
+              style={styles.dashboardMenu}
+              onPress={openDrawer}
+            >
+
+              <Ionicons
+                name="menu-outline"
+                size={28}
+                color={WHITE}
+              />
+
+            </TouchableOpacity>
+
+
+            <View style={styles.avatar}>
+
+              <Ionicons
+                name="person"
+                size={25}
+                color="#777"
+              />
+
+            </View>
+
+
+            <Text style={styles.welcomeSmall}>
+              Welcome back,
+            </Text>
+
+
+            <Text style={styles.dashboardUser}>
+              User
+            </Text>
+
+
+            <Text style={styles.balanceLabel}>
+              TOTAL BALANCE
+            </Text>
+
+
+            <Text style={styles.balance}>
+
+              ₱ 12,480
+
+              <Text
+                style={styles.balanceDecimal}
+              >
+                .50
+              </Text>
+
+            </Text>
+
+          </View>
+
+
+          {/* SCAN */}
+
+          <TouchableOpacity
+            style={styles.scanButton}
+            onPress={() =>
+              setScreen("scan")
+            }
+          >
+
+            <View style={styles.scanCircle}>
+
+              <MaterialCommunityIcons
+                name="qrcode-scan"
+                size={34}
+                color={WHITE}
+              />
+
+            </View>
+
+
+            <Text style={styles.scanText}>
+              Scan
+            </Text>
+
+          </TouchableOpacity>
+
+
+          {/* SPENDING */}
+
+          <SpendingCard />
+
+        </ScrollView>
+
+
+        <Sidebar />
+
+      </ScreenWrapper>
+    );
+  }
+
+
+  /* =====================================================
+     SCAN HOME
+  ===================================================== */
+
+  if (screen === "scan") {
+
+    return (
+      <ScreenWrapper>
+
+        <View style={styles.simpleHeader}>
+
+          <TouchableOpacity
+            onPress={openDrawer}
+          >
+
+            <Ionicons
+              name="menu-outline"
+              size={28}
+              color={WHITE}
+            />
+
+          </TouchableOpacity>
+
+        </View>
+
+
+        <View style={styles.scanHome}>
+
+          <DarkButton
+            title="Take Photo"
+            onPress={() =>
+              setScreen("camera")
+            }
+          />
+
+
+          <DarkButton
+            title="Upload Photo"
+            onPress={() =>
+              setScreen("review")
+            }
+          />
+
+
+          <DarkButton
+            title="Add Manual Receipt"
+            onPress={() =>
+              setScreen("review")
+            }
+          />
+
+
+          <Text style={styles.recentTitle}>
+            Recent Uploads
+          </Text>
+
+
+          <RecentUpload />
+          <RecentUpload />
+          <RecentUpload />
+
+        </View>
+
+
+        <Sidebar />
+
+      </ScreenWrapper>
+    );
+  }
+
+
+  /* =====================================================
+     CAMERA
+  ===================================================== */
+
+  if (screen === "camera") {
+
+    return (
+      <View style={styles.cameraScreen}>
+
+        <StatusBar
+          barStyle="light-content"
+        />
+
+
+        <View style={styles.cameraHeader}>
+
+          <TouchableOpacity
+            onPress={() =>
+              setScreen("scan")
+            }
+          >
+
+            <Ionicons
+              name="arrow-back"
+              size={24}
+              color={WHITE}
+            />
+
+          </TouchableOpacity>
+
+
+          <Text style={styles.cameraTitle}>
+            Camera Scan
+          </Text>
+
+
+          <Ionicons
+            name="settings-outline"
+            size={23}
+            color={WHITE}
+          />
+
+        </View>
+
+
+        {/* CAMERA FRAME */}
+
+        <View style={styles.cameraFrame}>
+
+          <View style={styles.receiptPreview}>
+
+            <Text style={styles.receiptStore}>
+              STARBUCKS COFFEE
+            </Text>
+
+
+            <Text style={styles.receiptSmall}>
+              123 Broadway, New York, NY
+            </Text>
+
+
+            <View style={styles.receiptLine} />
+
+
+            <Text style={styles.receiptCenter}>
+              CASH RECEIPT
+            </Text>
+
+
+            <ReceiptItem
+              name="Caffe Latte"
+              price="4.75"
+            />
+
+
+            <ReceiptItem
+              name="Iced Caramel Macch"
+              price="5.25"
+            />
+
+
+            <ReceiptItem
+              name="Avocado Toast Slice"
+              price="12.50"
+            />
+
+
+            <ReceiptItem
+              name="Warm Butter Croissant"
+              price="3.00"
+            />
+
+
+            <View style={styles.receiptLine} />
+
+
+            <Text style={styles.receiptTotal}>
+              TOTAL                 $25.50
+            </Text>
+
+
+            <Text style={styles.thankYou}>
+              THANK YOU!
+            </Text>
+
+          </View>
+
+        </View>
+
+
+        <Text style={styles.alignText}>
+          Align receipt within the frame to scan
+        </Text>
+
+
+        {/* CAMERA BUTTONS */}
+
+        <View style={styles.cameraActions}>
+
+          <TouchableOpacity
+            style={styles.cameraActionButton}
+            onPress={() =>
+              setScreen("scan")
+            }
+          >
+
+            <Ionicons
+              name="close-circle-outline"
+              size={18}
+              color={WHITE}
+            />
+
+            <Text style={styles.cameraActionText}>
+              Retake Scan
+            </Text>
+
+          </TouchableOpacity>
+
+
+          <TouchableOpacity
+            style={styles.deleteScan}
+            onPress={() =>
+              setScreen("scan")
+            }
+          >
+
+            <Ionicons
+              name="trash-outline"
+              size={18}
+              color={RED}
+            />
+
+            <Text style={styles.deleteText}>
+              Delete Scan
+            </Text>
+
+          </TouchableOpacity>
+
+        </View>
+
+
+        {/* CAMERA BOTTOM */}
+
+        <View style={styles.cameraBottom}>
+
+          <TouchableOpacity
+            style={styles.roundIcon}
+          >
+
+            <Ionicons
+              name="images-outline"
+              size={22}
+              color={WHITE}
+            />
+
+          </TouchableOpacity>
+
+
+          <TouchableOpacity
+            style={styles.shutter}
+            onPress={() =>
+              setScreen("review")
+            }
+          >
+
+            <View style={styles.shutterInner} />
+
+          </TouchableOpacity>
+
+
+          <TouchableOpacity
+            style={styles.roundIcon}
+          >
+
+            <Ionicons
+              name="document-text-outline"
+              size={22}
+              color={WHITE}
+            />
+
+          </TouchableOpacity>
+
+        </View>
+
+      </View>
+    );
+  }
+
+
+  /* =====================================================
+     REVIEW
+  ===================================================== */
+
+  if (screen === "review") {
+
+    return (
+      <ScreenWrapper>
+
+        <View style={styles.reviewHeader}>
+
+          <TouchableOpacity
+            onPress={() =>
+              setScreen("scan")
+            }
+          >
+
+            <Ionicons
+              name="arrow-back"
+              size={22}
+              color={WHITE}
+            />
+
+          </TouchableOpacity>
+
+
+          <Text style={styles.reviewTitle}>
+            Review Details
+          </Text>
+
+
+          <Ionicons
+            name="help-circle-outline"
+            size={22}
+            color={WHITE}
+          />
+
+
+          <Text style={styles.reviewSubtitle}>
+            Confirm extracted receipt data below.
+          </Text>
+
+        </View>
+
+
+        <ScrollView
+          style={styles.reviewBody}
+          contentContainerStyle={{
+            paddingBottom: 30,
+          }}
+        >
+
+          {/* EXTRACTED RECEIPT */}
+
+          <View style={styles.extractedCard}>
+
+            <Ionicons
+              name="document-text-outline"
+              size={28}
+              color="#20BDB4"
+            />
+
+
+            <Ionicons
+              name="checkmark-circle"
+              size={16}
+              color="#20BDB4"
+              style={{
+                position: "absolute",
+                right : 90,
+                top: 10,
+              }}
+            />
+
+
+            <Text style={styles.storeName}>
+              Starbucks
+            </Text>
+
+
+            <Text style={styles.extractedAmount}>
+              $25.50
+            </Text>
+
+
+            <Text style={styles.extractedText}>
+
+              We've extracted your info — make changes if
+              {"\n"}
+              needed.
+
+            </Text>
+
+          </View>
+
+
+          <ReviewRow
+            icon="close-circle-outline"
+            label="Merchant"
+            value="Starbucks"
+          />
+
+
+          <ReviewRow
+            icon="calendar-outline"
+            label="Date"
+            value="Aug 2, 2025"
+          />
+
+
+          <ReviewRow
+            icon="card-outline"
+            label="Total"
+            value="$25.50"
+          />
+
+
+          <ReviewRow
+            icon="card-outline"
+            label="Payment Method"
+            value="Visa •••• 5643"
+          />
+
+
+          <ReviewRow
+            icon="grid-outline"
+            label="Category"
+            value="Food & Beverage"
+            dropdown
+          />
+
+
+          <DarkButton
+            title="✓  Confirm & Save Expense"
+            onPress={() =>
+              setScreen("dashboard")
+            }
+          />
+
+
+          {/* EDIT / DELETE */}
+
+          <View style={styles.editDeleteRow}>
+
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() =>
+                setScreen("edit")
+              }
+            >
+
+              <Ionicons
+                name="create-outline"
+                size={16}
+                color={NAVY}
+              />
+
+              <Text style={styles.editText}>
+                Edit
+              </Text>
+
+            </TouchableOpacity>
+
+
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={() =>
+                setScreen("scan")
+              }
+            >
+
+              <Ionicons
+                name="trash-outline"
+                size={16}
+                color={RED}
+              />
+
+              <Text style={styles.deleteText}>
+                Delete
+              </Text>
+
+            </TouchableOpacity>
+
+          </View>
+
+        </ScrollView>
+
+      </ScreenWrapper>
+    );
+  }
+
+
+  /* =====================================================
+     EDIT
+  ===================================================== */
+
+  if (screen === "edit") {
+
+    return (
+      <ScreenWrapper>
+
+        <View style={styles.simpleHeader}>
+
+          <TouchableOpacity
+            onPress={() =>
+              setScreen("review")
+            }
+          >
+
+            <Ionicons
+              name="arrow-back"
+              size={26}
+              color={WHITE}
+            />
+
+          </TouchableOpacity>
+
+
+          <Text style={styles.editHeaderTitle}>
+            Edit Receipt
+          </Text>
+
+        </View>
+
+
+        <ScrollView
+          style={{
+            padding: 20,
+          }}
+          contentContainerStyle={{
+            paddingBottom: 30,
+          }}
+        >
+
+          <EditInput
+            label="Merchant"
+            value="Starbucks"
+          />
+
+
+          <EditInput
+            label="Date"
+            value="Aug 2, 2025"
+          />
+
+
+          <EditInput
+            label="Total"
+            value="$25.50"
+          />
+
+
+          <EditInput
+            label="Payment Method"
+            value="Visa •••• 5643"
+          />
+
+
+          <EditInput
+            label="Category"
+            value="Food & Beverage"
+          />
+
+
+          <DarkButton
+            title="Save Changes"
+            onPress={() =>
+              setScreen("review")
+            }
+          />
+
+        </ScrollView>
+
+      </ScreenWrapper>
+    );
+  }
+
+
+  /* =====================================================
+     RECORDS / REPORT / PROFILE
+  ===================================================== */
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" />
+    <ScreenWrapper>
 
-      <Animated.View style={[styles.screen, animatedStyle]}>
-        {page === "signin" && (
-          <SignIn
-            go={changePage}
+      <View style={styles.simpleHeader}>
+
+        <TouchableOpacity
+          onPress={openDrawer}
+        >
+
+          <Ionicons
+            name="menu-outline"
+            size={28}
+            color={WHITE}
           />
-        )}
 
-        {page === "signup" && (
-          <CreateAccount
-            go={changePage}
-          />
-        )}
+        </TouchableOpacity>
 
-        {page === "setup" && (
-          <Setup
-            go={changePage}
-          />
-        )}
+      </View>
 
-        {page === "dashboard" && (
-          <Dashboard
-            go={changePage}
-            openMenu={() => setMenuOpen(true)}
-          />
-        )}
 
-        {page === "records" && (
-          <Records
-            go={changePage}
-            openMenu={() => setMenuOpen(true)}
-          />
-        )}
+      <View style={styles.placeholderPage}>
 
-        {page === "profile" && (
-          <Profile
-            go={changePage}
-            openMenu={() => setMenuOpen(true)}
-          />
-        )}
+        <Text style={styles.placeholderTitle}>
 
-        {page === "report" && (
-          <Report
-            go={changePage}
-            openMenu={() => setMenuOpen(true)}
-          />
-        )}
-      </Animated.View>
+          {screen.charAt(0).toUpperCase() +
+            screen.slice(1)}
 
-      {menuOpen && (
-        <SideMenu
-          go={changePage}
-          closeMenu={() => setMenuOpen(false)}
-        />
-      )}
+        </Text>
+
+
+        <Text style={styles.placeholderText}>
+          This screen can be developed next.
+        </Text>
+
+      </View>
+
+
+      <Sidebar />
+
+    </ScreenWrapper>
+  );
+
+}
+
+
+/* =====================================================
+   SCREEN WRAPPER
+===================================================== */
+
+function ScreenWrapper({ children }) {
+
+  return (
+    <SafeAreaView style={styles.container}>
+
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={NAVY}
+      />
+
+      {children}
+
     </SafeAreaView>
   );
+
 }
 
-/* =========================================================
-   HEADER
-========================================================= */
 
-function Header({ openMenu }) {
+/* =====================================================
+   INPUT
+===================================================== */
+
+function Input({
+  label,
+  placeholder,
+  secure,
+}) {
+
   return (
-    <View style={styles.header}>
-      <Text style={styles.menuIcon} onPress={openMenu}>
-        ☰
+    <View style={styles.inputContainer}>
+
+      <Text style={styles.inputLabel}>
+        {label}
       </Text>
 
-      <View style={styles.statusRight}>
-        <Text style={styles.statusText}>● ● ▰</Text>
-      </View>
+
+      <TextInput
+        placeholder={placeholder}
+        placeholderTextColor="#777780"
+        secureTextEntry={secure}
+        style={styles.input}
+      />
+
     </View>
   );
+
 }
 
-/* =========================================================
-   SIGN IN
-========================================================= */
 
-function SignIn({ go }) {
+/* =====================================================
+   EDIT INPUT
+===================================================== */
+
+function EditInput({
+  label,
+  value,
+}) {
+
   return (
-    <View style={styles.fullDark}>
-      <Header openMenu={() => {}} />
+    <View style={styles.editInputContainer}>
 
-      <View style={styles.topWelcome}>
-        <View style={styles.smallSquare} />
+      <Text style={styles.editLabel}>
+        {label}
+      </Text>
 
-        <Text style={styles.welcomeText}>
-          Welcome Back.
-        </Text>
 
-        <Text style={styles.welcomeSub}>
-          Good To See You Again.
-        </Text>
-      </View>
+      <TextInput
+        value={value}
+        style={styles.editInput}
+      />
 
-      <View style={styles.formBox}>
-        <Text style={styles.formTitle}>SIGN IN</Text>
-
-        <Text style={styles.formDescription}>
-          Enter your details to continue.
-        </Text>
-
-        <Text style={styles.label}>Email</Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="username@email.com"
-          placeholderTextColor="#777"
-        />
-
-        <Text style={styles.label}>Password</Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="••••••••"
-          placeholderTextColor="#777"
-          secureTextEntry
-        />
-
-        <TouchableOpacity
-          style={styles.greenButton}
-          onPress={() => go("setup")}
-        >
-          <Text style={styles.greenButtonText}>
-            Sign In
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => go("signup")}>
-          <Text style={styles.accountText}>
-            New here? Create an Account
-          </Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
+
 }
 
-/* =========================================================
-   CREATE ACCOUNT
-========================================================= */
 
-function CreateAccount({ go }) {
+/* =====================================================
+   GREEN BUTTON
+===================================================== */
+
+function GreenButton({
+  title,
+  onPress,
+}) {
+
   return (
-    <View style={styles.fullDark}>
-      <Header openMenu={() => {}} />
+    <TouchableOpacity
+      style={styles.greenButton}
+      onPress={onPress}
+    >
 
-      <View style={styles.topWelcome}>
-        <View style={styles.smallSquare} />
+      <Text style={styles.greenButtonText}>
+        {title}
+      </Text>
 
-        <Text style={styles.welcomeText}>
-          Join Us.
-        </Text>
+    </TouchableOpacity>
+  );
 
-        <Text style={styles.welcomeSub}>
-          Start Something New{"\n"}Today.
-        </Text>
-      </View>
+}
 
-      <ScrollView
-        style={styles.formBox}
-        contentContainerStyle={{ paddingBottom: 30 }}
+
+/* =====================================================
+   DARK BUTTON
+===================================================== */
+
+function DarkButton({
+  title,
+  onPress,
+}) {
+
+  return (
+    <TouchableOpacity
+      style={styles.darkButton}
+      onPress={onPress}
+    >
+
+      <Text style={styles.darkButtonText}>
+        {title}
+      </Text>
+
+    </TouchableOpacity>
+  );
+
+}
+
+
+/* =====================================================
+   DRAWER BUTTON
+===================================================== */
+
+function DrawerButton({
+  icon,
+  title,
+  onPress,
+}) {
+
+  return (
+    <TouchableOpacity
+      style={styles.drawerButton}
+      onPress={onPress}
+      activeOpacity={0.75}
+    >
+
+      <Ionicons
+        name={icon}
+        size={20}
+        color={NAVY}
+      />
+
+
+      <Text style={styles.drawerButtonText}>
+        {title}
+      </Text>
+
+    </TouchableOpacity>
+  );
+
+}
+
+
+/* =====================================================
+   SETUP OPTION
+===================================================== */
+
+function SetupOption({
+  icon,
+  title,
+  subtitle,
+}) {
+
+  return (
+    <TouchableOpacity
+      style={styles.setupOption}
+    >
+
+      <Ionicons
+        name={icon}
+        size={28}
+        color={WHITE}
+      />
+
+
+      <View
+        style={{
+          marginLeft: 14,
+        }}
       >
-        <Text style={styles.formTitle}>
-          CREATE ACCOUNT
+
+        <Text style={styles.setupOptionTitle}>
+          {title}
         </Text>
 
-        <Text style={styles.formDescription}>
-          Enter your details to continue.
+
+        <Text style={styles.setupOptionSubtitle}>
+          {subtitle}
         </Text>
 
-        <Text style={styles.label}>Full Name</Text>
+      </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Full Name"
-          placeholderTextColor="#777"
-        />
-
-        <Text style={styles.label}>Email</Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="username@email.com"
-          placeholderTextColor="#777"
-        />
-
-        <Text style={styles.label}>Password</Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="••••••••"
-          placeholderTextColor="#777"
-          secureTextEntry
-        />
-
-        <TouchableOpacity
-          style={styles.greenButton}
-          onPress={() => go("setup")}
-        >
-          <Text style={styles.greenButtonText}>
-            Sign In
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => go("signin")}>
-          <Text style={styles.accountText}>
-            Already have an account? Sign In
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </View>
+    </TouchableOpacity>
   );
+
 }
 
-/* =========================================================
-   SETUP SCREEN
-========================================================= */
 
-function Setup({ go }) {
+/* =====================================================
+   SPENDING CARD
+===================================================== */
+
+function SpendingCard() {
+
   return (
-    <View style={styles.setupScreen}>
-      <View style={styles.setupTop}>
-        <Header openMenu={() => {}} />
+    <View style={styles.spendingCard}>
 
-        <View style={styles.setupTitleContainer}>
-          <Text style={styles.setupTitle}>
-            You’re In.
-          </Text>
+      <View style={styles.spendingHeader}>
 
-          <Text style={styles.setupTitle}>
-            Let’s Get You Set Up.
-          </Text>
+        <Text style={styles.spendingTitle}>
+          Spending Breakdown
+        </Text>
+
+
+        <Text style={styles.thisMonth}>
+          This Month
+        </Text>
+
+      </View>
+
+
+      <View style={styles.chartRow}>
+
+        <View style={styles.fakeChart}>
+
+          <View style={styles.chartCenter}>
+
+            <Text style={styles.spentLabel}>
+              SPENT
+            </Text>
+
+
+            <Text style={styles.spentAmount}>
+              $1,240
+            </Text>
+
+          </View>
+
         </View>
+
+
+        <View style={styles.legend}>
+
+          <Legend
+            color="#209B7F"
+            text="Shopping"
+          />
+
+          <Legend
+            color="#3798EF"
+            text="Food & Dining"
+          />
+
+          <Legend
+            color="#FF9900"
+            text="Entertainment"
+          />
+
+          <Legend
+            color="#B34BDB"
+            text="Transport"
+          />
+
+        </View>
+
       </View>
 
-      <View style={styles.setupBottom}>
-        <Text style={styles.setupWelcome}>
-          WELCOME, User
-        </Text>
-
-        <Text style={styles.setupDescription}>
-          Your account is ready. Here's a quick{"\n"}
-          look at what you can do first
-        </Text>
-
-        <TouchableOpacity style={styles.setupCard}>
-          <View style={styles.circleIcon}>
-            <Text style={styles.iconText}>♙</Text>
-          </View>
-
-          <View>
-            <Text style={styles.setupCardTitle}>
-              Complete your profile
-            </Text>
-
-            <Text style={styles.setupCardSub}>
-              Add Profile Photo
-            </Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.setupCard}>
-          <View style={styles.circleIcon}>
-            <Text style={styles.iconText}>⚙</Text>
-          </View>
-
-          <View>
-            <Text style={styles.setupCardTitle}>
-              Set Your Preferences
-            </Text>
-
-            <Text style={styles.setupCardSub}>
-              Tailor it to how you work
-            </Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.dashboardButton}
-          onPress={() => go("dashboard")}
-        >
-          <Text style={styles.dashboardButtonText}>
-            Go to Dashboard
-          </Text>
-        </TouchableOpacity>
-
-        <View style={styles.homeIndicator} />
-      </View>
     </View>
   );
+
 }
 
-/* =========================================================
-   DASHBOARD
-========================================================= */
 
-function Dashboard({ go, openMenu }) {
-  return (
-    <View style={styles.dashboardScreen}>
-      <View style={styles.dashboardHeader}>
-        <Header openMenu={openMenu} />
+/* =====================================================
+   LEGEND
+===================================================== */
 
-        <Text style={styles.dashboardWelcome}>
-          Welcome back,
-        </Text>
+function Legend({
+  color,
+  text,
+}) {
 
-        <Text style={styles.userName}>
-          User
-        </Text>
-
-        <Text style={styles.balanceLabel}>
-          TOTAL BALANCE
-        </Text>
-
-        <Text style={styles.balance}>
-          ₱ 12,480
-          <Text style={styles.decimal}>.50</Text>
-        </Text>
-
-        <View style={styles.profileCircle}>
-          <Text style={styles.profileIcon}>●</Text>
-        </View>
-      </View>
-
-      <View style={styles.dashboardBody}>
-
-        {/* SCAN BUTTON */}
-        <TouchableOpacity
-          style={styles.scanButton}
-          onPress={() => go("records")}
-        >
-          <Text style={styles.scanArrow}>↑</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.scanText}>
-          Scan
-        </Text>
-
-        {/* SPENDING BREAKDOWN */}
-        <View style={styles.breakdownCard}>
-          <View style={styles.breakdownHeader}>
-            <Text style={styles.breakdownTitle}>
-              Spending Breakdown
-            </Text>
-
-            <Text style={styles.monthText}>
-              This Month
-            </Text>
-          </View>
-
-          <View style={styles.chartRow}>
-            <View style={styles.donut}>
-              <View style={styles.donutInner}>
-                <Text style={styles.spentSmall}>
-                  SPENT
-                </Text>
-
-                <Text style={styles.spentAmount}>
-                  $1,240
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.legend}>
-              <Legend color="#19A982" text="Shopping" />
-              <Legend color="#278FEA" text="Food & Dining" />
-              <Legend color="#FF9D00" text="Entertainment" />
-              <Legend color="#A746DC" text="Transport" />
-            </View>
-          </View>
-        </View>
-      </View>
-    </View>
-  );
-}
-
-function Legend({ color, text }) {
   return (
     <View style={styles.legendItem}>
+
       <View
         style={[
           styles.legendDot,
-          { backgroundColor: color },
+          {
+            backgroundColor: color,
+          },
         ]}
       />
+
 
       <Text style={styles.legendText}>
         {text}
       </Text>
+
     </View>
   );
+
 }
 
-/* =========================================================
-   RECORDS
-========================================================= */
 
-function Records({ go, openMenu }) {
+/* =====================================================
+   RECENT UPLOAD
+===================================================== */
+
+function RecentUpload() {
+
   return (
-    <View style={styles.recordsScreen}>
-      <View style={styles.recordsHeader}>
-        <Header openMenu={openMenu} />
-      </View>
+    <View style={styles.recentUpload}>
 
-      <View style={styles.recordsBody}>
-
-        <TouchableOpacity
-          style={styles.recordsButton}
-          onPress={() => alert("Take Photo")}
-        >
-        <Text style={styles.uploadIcon}>
-            📷
-          </Text>
-
-          <Text style={styles.recordsButtonText}>
-            Take Photo
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.recordsButton}
-          onPress={() => alert("Upload Photo")}
-        >
-         <Text style={styles.uploadIcon}>
-            🖼
-          </Text>
-          
-          <Text style={styles.recordsButtonText}>
-            Upload Photo
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.recordsButton}
-          onPress={() => alert("Add Manual Receipt")}
-        >
-          <Text style={styles.recordsButtonText}>
-            Add Manual Receipt
-          </Text>
-        </TouchableOpacity>
-
-        <Text style={styles.recentTitle}>
-          Recent Uploads
-        </Text>
-
-        <View style={styles.uploadHeader}>
-          <Text style={styles.uploadHeaderText}>
-            Picture
-          </Text>
-
-          <Text style={styles.uploadHeaderText}>
-            Transaction No.
-          </Text>
-
-          <Text style={styles.uploadHeaderText}>
-            DATE
-          </Text>
-        </View>
-
-        <UploadRow number="001" date="08/09/26" />
-        <UploadRow number="002" date="08/08/26" />
-        <UploadRow number="003" date="08/07/26" />
-      </View>
-    </View>
-  );
-}
-
-function UploadRow({ number, date }) {
-  return (
-    <View style={styles.uploadRow}>
-      <View style={styles.pictureBox}>
-        <Text style={styles.pictureText}>
-          Picture
-        </Text>
-      </View>
-
-      <Text style={styles.transactionText}>
-        {number}
+      <Text style={styles.recentHeaderText}>
+        Picture
       </Text>
 
-      <Text style={styles.dateText}>
-        {date}
+
+      <Text style={styles.recentHeaderText}>
+        Transaction No.
       </Text>
+
+
+      <Text style={styles.recentHeaderText}>
+        DATE
+      </Text>
+
     </View>
   );
+
 }
 
-/* =========================================================
-   PROFILE
-========================================================= */
 
-function Profile({ go, openMenu }) {
+/* =====================================================
+   RECEIPT ITEM
+===================================================== */
+
+function ReceiptItem({
+  name,
+  price,
+}) {
+
   return (
-    <View style={styles.profileScreen}>
-      <View style={styles.profileHeader}>
-        <Header openMenu={openMenu} />
-      </View>
+    <View style={styles.receiptItem}>
 
-      <View style={styles.profileBody}>
-        <View style={styles.bigProfileCircle}>
-          <Text style={styles.bigProfileIcon}>
-            ●
-          </Text>
-        </View>
+      <Text style={styles.receiptItemName}>
+        {name}
+      </Text>
 
-        <Text style={styles.profileName}>
-          User
-        </Text>
 
-        <Text style={styles.profileEmail}>
-          username@email.com
-        </Text>
+      <Text style={styles.receiptItemPrice}>
+        {price}
+      </Text>
 
-        <TouchableOpacity style={styles.profileButton}>
-          <Text>Edit Profile</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.profileButton}>
-          <Text>Preferences</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.profileButton}>
-          <Text>Security</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
+
 }
 
-/* =========================================================
-   REPORT
-========================================================= */
 
-function Report({ openMenu }) {
+/* =====================================================
+   REVIEW ROW
+===================================================== */
+
+function ReviewRow({
+  icon,
+  label,
+  value,
+  dropdown,
+}) {
+
   return (
-    <View style={styles.reportScreen}>
-      <View style={styles.reportHeader}>
-        <Header openMenu={openMenu} />
-      </View>
+    <View style={styles.reviewRow}>
 
-      <View style={styles.reportBody}>
-        <Text style={styles.reportTitle}>
-          Spending Report
-        </Text>
-
-        <View style={styles.reportCard}>
-          <Text style={styles.reportCardTitle}>
-            Monthly Spending
-          </Text>
-
-          <Text style={styles.reportAmount}>
-            ₱1,240
-          </Text>
-
-          <Text style={styles.reportDescription}>
-            Your spending summary for this month.
-          </Text>
-        </View>
-      </View>
-    </View>
-  );
-}
-
-/* =========================================================
-   SIDE MENU
-========================================================= */
-
-function SideMenu({ go, closeMenu }) {
-  return (
-    <View style={styles.menuOverlay}>
-
-      <TouchableOpacity
-        style={styles.menuBackground}
-        onPress={closeMenu}
+      <Ionicons
+        name={icon}
+        size={17}
+        color="#707780"
       />
 
-      <View style={styles.sideMenu}>
 
-        <View style={styles.sideMenuTop}>
-          <Text
-            style={styles.closeMenu}
-            onPress={closeMenu}
-          >
-            ×
-          </Text>
-        </View>
+      <Text style={styles.reviewLabel}>
+        {label}
+      </Text>
 
-        <TouchableOpacity
-          style={styles.menuButton}
-          onPress={() => go("dashboard")}
-        >
-          <Text style={styles.menuButtonText}>
-            Dashboard
-          </Text>
-        </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.menuButton}
-          onPress={() => go("records")}
-        >
-          <Text style={styles.menuButtonText}>
-            Records
-          </Text>
-        </TouchableOpacity>
+      <View
+        style={{
+          flex: 1,
+        }}
+      />
 
-        <TouchableOpacity
-          style={styles.menuButton}
-          onPress={() => go("report")}
-        >
-          <Text style={styles.menuButtonText}>
-            Report
-          </Text>
-        </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.menuButton}
-          onPress={() => go("profile")}
-        >
-          <Text style={styles.menuButtonText}>
-            Profile
-          </Text>
-        </TouchableOpacity>
+      <Text style={styles.reviewValue}>
+        {value}
+      </Text>
 
-        <View style={{ flex: 1 }} />
 
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={() => go("signin")}
-        >
-          <Text style={styles.menuButtonText}>
-            Log out
-          </Text>
-        </TouchableOpacity>
-      </View>
+      {dropdown && (
+        <Ionicons
+          name="chevron-down"
+          size={16}
+          color={NAVY}
+        />
+      )}
+
     </View>
   );
+
 }
 
-/* =========================================================
+
+/* =====================================================
    STYLES
-========================================================= */
+===================================================== */
 
 const styles = StyleSheet.create({
-  safeArea: {
+
+  /* ================================================
+     GENERAL
+  ================================================ */
+
+  container: {
     flex: 1,
+    backgroundColor: BG,
+  },
+
+
+  /* ================================================
+     LOGIN / REGISTER
+  ================================================ */
+
+  authTop: {
+    height: "41%",
     backgroundColor: NAVY,
+    paddingHorizontal: 25,
+    paddingTop: 20,
   },
 
-  screen: {
-    flex: 1,
-  },
 
-  fullDark: {
-    flex: 1,
-    backgroundColor: NAVY,
-  },
-
-  header: {
-    height: 65,
-    paddingHorizontal: 22,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-
-  menuIcon: {
-    color: WHITE,
-    fontSize: 28,
-    fontWeight: "300",
-  },
-
-  statusRight: {
-    position: "absolute",
-    right: 20,
-    top: 25,
-  },
-
-  statusText: {
-    color: WHITE,
-    fontSize: 10,
-  },
-
-  topWelcome: {
-    paddingHorizontal: 30,
-    paddingTop: 55,
-    flex: 1,
-  },
-
-  smallSquare: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    backgroundColor: "#222245",
+  fakeLogo: {
+    width: 34,
+    height: 34,
+    backgroundColor: "#242432",
+    borderRadius: 7,
     marginBottom: 20,
   },
 
-  welcomeText: {
+
+  menuIcon: {
+    position: "absolute",
+    right: 20,
+    top: 20,
+  },
+
+
+  authHeading: {
     color: WHITE,
     fontSize: 20,
+    lineHeight: 25,
+    marginTop: 25,
+    fontWeight: "400",
   },
 
-  welcomeSub: {
-    color: WHITE,
-    fontSize: 18,
-    marginTop: 3,
-    lineHeight: 22,
-  },
 
-  formBox: {
+  authBottom: {
     backgroundColor: DARK,
-    paddingHorizontal: 24,
-    paddingTop: 18,
-    minHeight: 360,
+    flex: 1,
+    paddingHorizontal: 30,
+    paddingTop: 15,
   },
 
-  formTitle: {
+
+  authTitle: {
     color: WHITE,
+    fontSize: 21,
     textAlign: "center",
-    fontSize: 19,
-    fontWeight: "bold",
+    fontWeight: "800",
     fontFamily: "serif",
+    marginBottom: 10,
   },
 
-  formDescription: {
-    color: "#777",
+
+  authSubtitle: {
+    color: "#777780",
     textAlign: "center",
-    fontSize: 9,
-    marginTop: 5,
+    fontSize: 11,
     marginBottom: 22,
   },
 
-  label: {
-    color: WHITE,
-    fontSize: 9,
-    marginBottom: 5,
+
+  inputContainer: {
+    marginBottom: 17,
   },
+
+
+  inputLabel: {
+    color: WHITE,
+    fontSize: 11,
+    marginBottom: 6,
+  },
+
 
   input: {
-    height: 36,
-    borderBottomWidth: 1,
-    borderBottomColor: "#777",
+    height: 32,
     color: WHITE,
-    marginBottom: 15,
-    fontSize: 12,
+    fontSize: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#AAAAB0",
+    paddingHorizontal: 0,
   },
+
 
   greenButton: {
+    width: "100%",
+    height: 42,
     backgroundColor: GREEN,
-    height: 38,
-    borderRadius: 5,
-    alignItems: "center",
+    borderRadius: 7,
     justifyContent: "center",
-    marginTop: 5,
+    alignItems: "center",
+    marginTop: 10,
   },
 
+
   greenButtonText: {
-    color: NAVY,
-    fontSize: 12,
+    color: "#101015",
+    fontSize: 14,
+    fontWeight: "500",
   },
+
+
+  accountLink: {
+    marginTop: 15,
+    alignItems: "center",
+  },
+
 
   accountText: {
     color: WHITE,
-    textAlign: "center",
-    fontSize: 8,
-    marginTop: 12,
+    fontSize: 11,
   },
 
-  /* SETUP */
 
-  setupScreen: {
-    flex: 1,
-    backgroundColor: DARK,
-  },
+  /* ================================================
+     SETUP
+  ================================================ */
 
   setupTop: {
-    height: "45%",
+    height: "41%",
     backgroundColor: NAVY,
+    padding: 25,
+    justifyContent: "flex-start",
   },
 
-  setupTitleContainer: {
-    paddingHorizontal: 32,
-    marginTop: 75,
-  },
 
-  setupTitle: {
+  setupHeading: {
     color: WHITE,
-    fontSize: 27,
-    lineHeight: 36,
+    fontSize: 21,
+    lineHeight: 27,
   },
+
 
   setupBottom: {
     flex: 1,
     backgroundColor: DARK,
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
-    alignItems: "center",
-    paddingTop: 30,
-    paddingHorizontal: 25,
+    paddingHorizontal: 20,
+    paddingTop: 15,
   },
 
-  setupWelcome: {
-    color: WHITE,
-    fontSize: 24,
-    fontWeight: "bold",
-    fontFamily: "serif",
-  },
 
   setupDescription: {
-    color: "#777",
-    fontSize: 13,
+    color: "#777780",
     textAlign: "center",
-    marginTop: 8,
-    marginBottom: 30,
-    lineHeight: 20,
-  },
-
-  setupCard: {
-    width: "90%",
-    height: 72,
-    backgroundColor: NAVY,
-    borderRadius: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 15,
-    marginBottom: 18,
-  },
-
-  circleIcon: {
-    width: 45,
-    height: 45,
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: WHITE,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 15,
-  },
-
-  iconText: {
-    color: WHITE,
-    fontSize: 24,
-  },
-
-  setupCardTitle: {
-    color: WHITE,
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-
-  setupCardSub: {
-    color: "#999",
-    fontSize: 12,
-    marginTop: 3,
-  },
-
-  dashboardButton: {
-    width: "90%",
-    height: 48,
-    backgroundColor: GREEN,
-    borderRadius: 6,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 18,
-  },
-
-  dashboardButtonText: {
-    color: NAVY,
-    fontSize: 16,
-  },
-
-  homeIndicator: {
-    width: 130,
-    height: 4,
-    backgroundColor: WHITE,
-    borderRadius: 5,
-    position: "absolute",
-    bottom: 10,
-  },
-
-  /* DASHBOARD */
-
-  dashboardScreen: {
-    flex: 1,
-    backgroundColor: "#E7E7E7",
-  },
-
-  dashboardHeader: {
-    height: 250,
-    backgroundColor: NAVY,
-    borderBottomLeftRadius: 18,
-    borderBottomRightRadius: 18,
-    paddingHorizontal: 25,
-  },
-
-  dashboardWelcome: {
-    color: "#B7B5D0",
-    fontSize: 12,
-    marginTop: 8,
-  },
-
-  userName: {
-    color: WHITE,
-    fontSize: 21,
-    fontWeight: "bold",
-  },
-
-  balanceLabel: {
-    color: "#A6A4C0",
-    fontSize: 10,
-    marginTop: 20,
-  },
-
-  balance: {
-    color: WHITE,
-    fontSize: 32,
-    fontWeight: "bold",
-  },
-
-  decimal: {
-    color: "#AAA9C9",
-    fontSize: 16,
-  },
-
-  profileCircle: {
-    position: "absolute",
-    right: 28,
-    top: 70,
-    width: 45,
-    height: 45,
-    borderRadius: 25,
-    backgroundColor: "#DDD",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  profileIcon: {
-    color: "#888",
-    fontSize: 25,
-  },
-
-  dashboardBody: {
-    flex: 1,
-    alignItems: "center",
-    paddingTop: 8,
-  },
-
-  scanButton: {
-    width: 52,
-    height: 52,
-    borderRadius: 30,
-    backgroundColor: NAVY,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 0,
-  },
-
-  scanArrow: {
-    color: WHITE,
-    fontSize: 25,
-  },
-
-  scanText: {
-    color: "#111",
-    fontSize: 10,
-    marginTop: 2,
+    fontSize: 11,
     marginBottom: 25,
   },
 
-  breakdownCard: {
-    width: "82%",
+
+  setupOption: {
+    backgroundColor: NAVY,
+    minHeight: 48,
+    borderRadius: 7,
+    marginBottom: 18,
+    paddingHorizontal: 13,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+
+  setupOptionTitle: {
+    color: WHITE,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+
+
+  setupOptionSubtitle: {
+    color: WHITE,
+    fontSize: 10,
+  },
+
+
+  /* ================================================
+     DASHBOARD
+  ================================================ */
+
+  dashboardHeader: {
+    backgroundColor: NAVY,
+    height: 188,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    padding: 20,
+  },
+
+
+  dashboardMenu: {
+    position: "absolute",
+    left: 20,
+    top: 30,
+  },
+
+
+  welcomeSmall: {
+    position: "absolute",
+    left: 70,
+    top: 30,
+    color: "#AAAAC5",
+    fontSize: 11,
+  },
+
+
+  dashboardUser: {
+    position: "absolute",
+    left: 70,
+    top: 52,
+    color: WHITE,
+    fontSize: 18,
+    fontWeight: "700",
+  },
+
+
+  avatar: {
+    position: "absolute",
+    right: 22,
+    top: 38,
+    width: 43,
+    height: 43,
+    borderRadius: 23,
+    backgroundColor: "#DDD",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+
+  balanceLabel: {
+    position: "absolute",
+    left: 20,
+    top: 83,
+    color: "#AAAAC5",
+    fontSize: 9,
+  },
+
+
+  balance: {
+    position: "absolute",
+    left: 20,
+    top: 100,
+    color: WHITE,
+    fontSize: 30,
+    fontWeight: "800",
+  },
+
+
+  balanceDecimal: {
+    color: "#AAAAC5",
+    fontSize: 16,
+  },
+
+
+  scanButton: {
+    alignItems: "center",
+    marginTop: 8,
+  },
+
+
+  scanCircle: {
+    width: 52,
+    height: 52,
+    backgroundColor: NAVY,
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+
+  scanText: {
+    fontSize: 11,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+
+
+  /* ================================================
+     SPENDING
+  ================================================ */
+
+  spendingCard: {
     backgroundColor: WHITE,
+    marginHorizontal: 15,
+    marginTop: 22,
     borderRadius: 16,
-    padding: 18,
+    padding: 17,
     elevation: 4,
   },
 
-  breakdownHeader: {
+
+  spendingHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
   },
 
-  breakdownTitle: {
-    color: "#111",
+
+  spendingTitle: {
     fontSize: 15,
-    fontWeight: "bold",
+    fontWeight: "800",
   },
 
-  monthText: {
-    color: "#111",
-    fontSize: 12,
+
+  thisMonth: {
+    fontSize: 11,
+    fontWeight: "700",
   },
+
 
   chartRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 20,
+    marginTop: 10,
   },
 
-  donut: {
-    width: 115,
-    height: 115,
+
+  fakeChart: {
+    width: 105,
+    height: 105,
     borderRadius: 60,
-    borderWidth: 20,
-    borderTopColor: "#19A982",
-    borderRightColor: "#278FEA",
-    borderBottomColor: "#FF9D00",
-    borderLeftColor: "#A746DC",
-    alignItems: "center",
+    borderWidth: 13,
+    borderColor: "#209B7F",
+    borderRightColor: "#3798EF",
+    borderBottomColor: "#FF9900",
+    borderLeftColor: "#B34BDB",
     justifyContent: "center",
-  },
-
-  donutInner: {
     alignItems: "center",
   },
 
-  spentSmall: {
-    fontSize: 9,
-    color: "#999",
+
+  chartCenter: {
+    width: 70,
+    height: 70,
+    borderRadius: 40,
+    backgroundColor: WHITE,
+    justifyContent: "center",
+    alignItems: "center",
   },
+
+
+  spentLabel: {
+    color: "#888",
+    fontSize: 8,
+  },
+
 
   spentAmount: {
-    fontSize: 15,
-    fontWeight: "bold",
+    fontWeight: "800",
+    fontSize: 14,
   },
+
 
   legend: {
     marginLeft: 18,
   },
+
 
   legendItem: {
     flexDirection: "row",
@@ -1099,256 +2079,600 @@ const styles = StyleSheet.create({
     marginBottom: 7,
   },
 
+
   legendDot: {
     width: 8,
     height: 8,
     borderRadius: 5,
-    marginRight: 7,
+    marginRight: 8,
   },
+
 
   legendText: {
     fontSize: 11,
-    color: "#222",
   },
 
-  /* RECORDS */
 
-  recordsScreen: {
-    flex: 1,
-    backgroundColor: "#E7E7E7",
-  },
+  /* ================================================
+     SCAN
+  ================================================ */
 
-  recordsHeader: {
-    height: 115,
+  simpleHeader: {
+    height: 80,
     backgroundColor: NAVY,
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
-  },
-
-  recordsBody: {
-    paddingHorizontal: 25,
-    paddingTop: 35,
-  },
-
-  recordsButton: {
-    height: 54,
-    backgroundColor: NAVY,
-    borderRadius: 12,
+    paddingHorizontal: 18,
+    justifyContent: "flex-start",
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 18,
   },
 
-  recordsButtonText: {
-    color: WHITE,
-    fontSize: 13,
-    fontWeight: "bold",
+
+  scanHome: {
+    flex: 1,
+    paddingHorizontal: 25,
+    paddingTop: 50,
   },
+
+
+  darkButton: {
+    width: "100%",
+    height: 50,
+    backgroundColor: NAVY,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+
+
+  darkButtonText: {
+    color: WHITE,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+
 
   recentTitle: {
-    textAlign: "center",
     fontSize: 20,
-    fontWeight: "bold",
-    marginTop: 20,
-    marginBottom: 18,
+    fontWeight: "800",
+    textAlign: "center",
+    marginTop: 22,
+    marginBottom: 17,
   },
 
-  uploadHeader: {
-    height: 53,
+
+  recentUpload: {
+    height: 40,
     backgroundColor: NAVY,
-    borderRadius: 15,
+    borderRadius: 17,
+    marginBottom: 6,
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-around",
-  },
-
-  uploadHeaderText: {
-    color: WHITE,
-    fontSize: 8,
-    fontWeight: "bold",
-  },
-
-  uploadRow: {
-    height: 53,
-    backgroundColor: NAVY,
-    borderRadius: 15,
-    marginTop: 8,
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-around",
   },
 
-  pictureBox: {
-    width: 55,
-  },
 
-  pictureText: {
+  recentHeaderText: {
     color: WHITE,
-    fontSize: 8,
+    fontSize: 7,
+    fontWeight: "700",
   },
 
-  transactionText: {
-    color: WHITE,
-    fontSize: 8,
-  },
 
-  dateText: {
-    color: WHITE,
-    fontSize: 8,
-  },
+  /* ================================================
+     CAMERA
+  ================================================ */
 
-  /* PROFILE */
-
-  profileScreen: {
+  cameraScreen: {
     flex: 1,
-    backgroundColor: DARK,
-  },
-
-  profileHeader: {
     backgroundColor: NAVY,
-    height: 85,
   },
 
-  profileBody: {
+
+  cameraHeader: {
+    height: 75,
+    flexDirection: "row",
     alignItems: "center",
-    paddingTop: 25,
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
   },
 
-  bigProfileCircle: {
-    width: 70,
-    height: 70,
-    borderRadius: 40,
-    backgroundColor: "#DDD",
+
+  cameraTitle: {
+    color: WHITE,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+
+
+  cameraFrame: {
+    height: width * 0.75,
+    marginHorizontal: 20,
+    borderWidth: 3,
+    borderColor: WHITE,
     justifyContent: "center",
     alignItems: "center",
   },
 
-  bigProfileIcon: {
-    color: "#888",
-    fontSize: 38,
+
+  receiptPreview: {
+    width: "85%",
+    height: "88%",
+    backgroundColor: "#F2F3F7",
+    padding: 15,
   },
 
-  profileName: {
-    color: WHITE,
-    fontSize: 16,
-    fontWeight: "bold",
-    marginTop: 8,
+
+  receiptStore: {
+    textAlign: "center",
+    fontSize: 15,
+    fontWeight: "900",
+    color: "#272727",
   },
 
-  profileEmail: {
+
+  receiptSmall: {
+    textAlign: "center",
+    fontSize: 7,
     color: "#777",
+  },
+
+
+  receiptCenter: {
+    textAlign: "center",
+    fontSize: 8,
+    fontWeight: "800",
+    marginBottom: 12,
+    color: "#333",
+  },
+
+
+  receiptLine: {
+    borderBottomWidth: 1,
+    borderStyle: "dashed",
+    borderBottomColor: "#DDD",
+    marginVertical: 8,
+  },
+
+
+  receiptItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+
+
+  receiptItemName: {
+    fontSize: 7,
+    color: "#444",
+  },
+
+
+  receiptItemPrice: {
+    fontSize: 7,
+    color: "#444",
+  },
+
+
+  receiptTotal: {
     fontSize: 9,
-    marginBottom: 25,
+    fontWeight: "900",
+    color: "#333",
   },
 
-  profileButton: {
-    width: "75%",
-    height: 42,
-    backgroundColor: WHITE,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 14,
+
+  thankYou: {
+    textAlign: "center",
+    fontSize: 8,
+    fontWeight: "700",
+    marginTop: 20,
   },
 
-  /* REPORT */
 
-  reportScreen: {
-    flex: 1,
-    backgroundColor: "#E7E7E7",
+  alignText: {
+    color: WHITE,
+    textAlign: "center",
+    marginTop: 28,
+    fontSize: 12,
   },
 
-  reportHeader: {
-    height: 100,
-    backgroundColor: NAVY,
-  },
 
-  reportBody: {
-    padding: 25,
-  },
-
-  reportTitle: {
-    fontSize: 25,
-    fontWeight: "bold",
-  },
-
-  reportCard: {
-    marginTop: 25,
-    backgroundColor: WHITE,
-    padding: 25,
-    borderRadius: 15,
-  },
-
-  reportCardTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-
-  reportAmount: {
-    fontSize: 32,
-    fontWeight: "bold",
+  cameraActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 17,
     marginTop: 15,
   },
 
-  reportDescription: {
-    color: GRAY,
-    marginTop: 10,
+
+  cameraActionButton: {
+    borderWidth: 1,
+    borderColor: WHITE,
+    borderRadius: 10,
+    height: 40,
+    width: "47%",
+    justifyContent: "center",
+    alignItems: "center",
+    flexDirection: "row",
   },
 
-  /* SIDE MENU */
 
-  menuOverlay: {
+  cameraActionText: {
+    color: WHITE,
+    fontWeight: "700",
+    marginLeft: 6,
+  },
+
+
+  deleteScan: {
+    backgroundColor: "#FFE7E8",
+    borderRadius: 10,
+    height: 40,
+    width: "47%",
+    justifyContent: "center",
+    alignItems: "center",
+    flexDirection: "row",
+  },
+
+
+  deleteText: {
+    color: RED,
+    fontWeight: "700",
+    marginLeft: 5,
+  },
+
+
+  cameraBottom: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    marginTop: 24,
+  },
+
+
+  roundIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 25,
+    backgroundColor: "#171742",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+
+  shutter: {
+    width: 68,
+    height: 68,
+    borderRadius: 40,
+    backgroundColor: WHITE,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+
+  shutterInner: {
+    width: 59,
+    height: 59,
+    borderRadius: 35,
+    backgroundColor: NAVY,
+    borderWidth: 3,
+    borderColor: WHITE,
+  },
+
+
+  /* ================================================
+     REVIEW
+  ================================================ */
+
+  reviewHeader: {
+    height: 108,
+    backgroundColor: NAVY,
+    padding: 18,
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+
+
+  reviewTitle: {
+    color: WHITE,
+    fontSize: 15,
+    fontWeight: "800",
+    flex: 1,
+    textAlign: "center",
+  },
+
+
+  reviewSubtitle: {
     position: "absolute",
+    left: 18,
+    bottom: 14,
+    color: "#AAAAC5",
+    fontSize: 10,
+  },
+
+
+  reviewBody: {
+    flex: 1,
+    backgroundColor: WHITE,
+    padding: 17,
+  },
+
+
+  extractedCard: {
+    backgroundColor: "#E6FAFA",
+    borderWidth: 1,
+    borderColor: "#20BDB4",
+    borderRadius: 11,
+    minHeight: 125,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 15,
+  },
+
+
+  storeName: {
+    color: "#777",
+    marginTop: 4,
+    fontSize: 10,
+  },
+
+
+  extractedAmount: {
+    fontSize: 27,
+    fontWeight: "900",
+    color: "#222",
+  },
+
+
+  extractedText: {
+    color: "#777",
+    fontSize: 8,
+    textAlign: "center",
+    marginTop: 4,
+  },
+
+
+  reviewRow: {
+    minHeight: 39,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E5E5",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+  },
+
+
+  reviewLabel: {
+    color: "#737981",
+    fontSize: 11,
+    marginLeft: 10,
+  },
+
+
+  reviewValue: {
+    color: "#252525",
+    fontSize: 11,
+    fontWeight: "700",
+    marginRight: 8,
+  },
+
+
+  editDeleteRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+
+
+  editButton: {
+    width: "48%",
+    height: 40,
+    borderWidth: 1,
+    borderColor: NAVY,
+    borderRadius: 9,
+    justifyContent: "center",
+    alignItems: "center",
+    flexDirection: "row",
+  },
+
+
+  editText: {
+    color: NAVY,
+    fontWeight: "700",
+    marginLeft: 5,
+  },
+
+
+  deleteButton: {
+    width: "48%",
+    height: 40,
+    borderWidth: 1,
+    borderColor: RED,
+    backgroundColor: "#FFE7E8",
+    borderRadius: 9,
+    justifyContent: "center",
+    alignItems: "center",
+    flexDirection: "row",
+  },
+
+
+  /* ================================================
+     EDIT
+  ================================================ */
+
+  editHeaderTitle: {
+    color: WHITE,
+    fontSize: 17,
+    fontWeight: "800",
+    marginLeft: 20,
+  },
+
+
+  editInputContainer: {
+    marginBottom: 20,
+  },
+
+
+  editLabel: {
+    color: "#666",
+    fontSize: 12,
+    marginBottom: 6,
+  },
+
+
+  editInput: {
+    height: 45,
+    borderWidth: 1,
+    borderColor: "#CCC",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    color: "#222",
+    backgroundColor: WHITE,
+  },
+
+
+  /* ================================================
+     ANIMATED SIDEBAR
+  ================================================ */
+
+  drawerOverlay: {
+    position: "absolute",
+
     left: 0,
     right: 0,
     top: 0,
     bottom: 0,
-    flexDirection: "row",
+
+    zIndex: 1000,
   },
 
-  menuBackground: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
+
+  /*
+   * Dark background behind sidebar
+   */
+
+  drawerBackdrop: {
+    position: "absolute",
+
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+
+    backgroundColor: "#000000",
   },
 
-  sideMenu: {
-    width: width * 0.55,
+
+  /*
+   * Actual sidebar
+   */
+
+  drawer: {
+    position: "absolute",
+
+    left: 0,
+    top: 0,
+    bottom: 0,
+
+    width: width * 0.47,
+
     backgroundColor: NAVY,
-    paddingTop: 40,
-    paddingHorizontal: 12,
-    paddingBottom: 20,
+
+    paddingHorizontal: 15,
+    paddingTop: 30,
+
+    borderTopRightRadius: 15,
+    borderBottomRightRadius: 15,
+
+    elevation: 15,
+
+    shadowColor: "#000",
+
+    shadowOffset: {
+      width: 4,
+      height: 0,
+    },
+
+    shadowOpacity: 0.3,
+
+    shadowRadius: 8,
   },
 
-  sideMenuTop: {
-    height: 45,
-  },
 
-  closeMenu: {
-    color: WHITE,
-    fontSize: 28,
-  },
+  drawerTop: {
+    height: 60,
 
-  menuButton: {
-    height: 43,
-    backgroundColor: "#E8E8E8",
-    borderRadius: 12,
-    alignItems: "center",
     justifyContent: "center",
-    marginBottom: 10,
   },
 
-  menuButtonText: {
-    color: "#111",
+
+  closeButton: {
+    width: 38,
+    height: 38,
+
+    justifyContent: "center",
+    alignItems: "center",
+
+    borderRadius: 20,
+  },
+
+
+  drawerButton: {
+    backgroundColor: "#F0F0F0",
+
+    height: 43,
+
+    borderRadius: 22,
+
+    marginBottom: 10,
+
+    flexDirection: "row",
+
+    alignItems: "center",
+
+    justifyContent: "center",
+
+    elevation: 2,
+  },
+
+
+  drawerButtonText: {
+    color: NAVY,
+
     fontSize: 10,
-    fontWeight: "bold",
+
+    fontWeight: "700",
+
+    marginLeft: 8,
   },
 
-  logoutButton: {
-    height: 43,
-    backgroundColor: "#E8E8E8",
-    borderRadius: 12,
-    alignItems: "center",
+
+  /* ================================================
+     PLACEHOLDER
+  ================================================ */
+
+  placeholderPage: {
+    flex: 1,
+
     justifyContent: "center",
-    marginBottom: 10,
+
+    alignItems: "center",
   },
+
+
+  placeholderTitle: {
+    fontSize: 26,
+
+    fontWeight: "800",
+
+    color: NAVY,
+  },
+
+
+  placeholderText: {
+    color: GRAY,
+
+    marginTop: 10,
+  },
+
 });
