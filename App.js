@@ -915,21 +915,6 @@ function DashboardScreen({
             </Text>
 
           </View>
-
-          <TouchableOpacity
-            onPress={() =>
-              onNavigate("profile")
-            }
-          >
-
-            <Ionicons
-              name="person-circle-outline"
-              size={37}
-              color={COLORS.green}
-            />
-
-          </TouchableOpacity>
-
         </View>
 
         <View style={styles.balanceCard}>
