@@ -883,7 +883,9 @@ function DashboardScreen({
   onNavigate,
   onAddExpense,
 }) {
-  const [modalVisible, setModalVisible] =
+  const [scanModalVisible, setScanModalVisible] =
+    useState(false);
+  const [addModalVisible, setAddModalVisible] =
     useState(false);
 
   const total = expenses.reduce(
@@ -942,7 +944,7 @@ function DashboardScreen({
             icon="camera-outline"
             title="Scan"
             onPress={() =>
-              setModalVisible(true)
+              setScanModalVisible(true)
             }
           />
 
@@ -950,7 +952,7 @@ function DashboardScreen({
             icon="add-circle-outline"
             title="Add"
             onPress={() =>
-              setModalVisible(true)
+              setAddModalVisible(true)
             }
           />
 
@@ -1017,13 +1019,24 @@ function DashboardScreen({
       />
 
       <AddExpenseModal
-        visible={modalVisible}
+        visible={scanModalVisible}
         onClose={() =>
-          setModalVisible(false)
+          setScanModalVisible(false)
         }
         onAdd={(expense) => {
           onAddExpense(expense);
-          setModalVisible(false);
+          setScanModalVisible(false);
+        }}
+      />
+
+      <AddReceiptModal
+        visible={addModalVisible}
+        onClose={() =>
+          setAddModalVisible(false)
+        }
+        onAdd={(expense) => {
+          onAddExpense(expense);
+          setAddModalVisible(false);
         }}
       />
 
@@ -1182,7 +1195,7 @@ function RecordsScreen({
   const [search, setSearch] =
     useState("");
 
-  const [modalVisible, setModalVisible] =
+  const [addModalVisible, setAddModalVisible] =
     useState(false);
 
   const filtered =
@@ -1295,7 +1308,7 @@ function RecordsScreen({
       <TouchableOpacity
         style={styles.floatingButton}
         onPress={() =>
-          setModalVisible(true)
+          setAddModalVisible(true)
         }
       >
 
@@ -1312,14 +1325,14 @@ function RecordsScreen({
         onNavigate={onNavigate}
       />
 
-      <AddExpenseModal
-        visible={modalVisible}
+      <AddReceiptModal
+        visible={addModalVisible}
         onClose={() =>
-          setModalVisible(false)
+          setAddModalVisible(false)
         }
         onAdd={(expense) => {
           onAddExpense(expense);
-          setModalVisible(false);
+          setAddModalVisible(false);
         }}
       />
 
@@ -2203,6 +2216,301 @@ function AddExpenseModal({
 
       </KeyboardAvoidingView>
 
+    </Modal>
+  );
+}
+
+/* =========================================================
+   ADD RECEIPT MODAL
+========================================================= */
+
+function AddReceiptModal({
+  visible,
+  onClose,
+  onAdd,
+}) {
+  const [store, setStore] = useState("");
+  const [amount, setAmount] = useState("240.00");
+  const [category, setCategory] = useState("Shopping");
+  const [note, setNote] = useState("");
+  const [date, setDate] = useState("September 15, 2026");
+  const [showDateOptions, setShowDateOptions] = useState(false);
+  const [showDateSheet, setShowDateSheet] = useState(false);
+
+  const categoryOptions = [
+    { label: "Category", value: "Shopping", icon: "cart-outline" },
+    { label: "Food", value: "Food & Dining", icon: "restaurant-outline" },
+    { label: "Fun", value: "Entertainment", icon: "game-controller-outline" },
+    { label: "Travel", value: "Transportation", icon: "car-outline" },
+  ];
+
+  const dayOptions = Array.from({ length: 31 }, (_, index) => index + 1);
+  const monthOptions = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+
+  const [selectedDay, setSelectedDay] = useState(15);
+  const [selectedMonth, setSelectedMonth] = useState("September");
+  const [selectedYear, setSelectedYear] = useState("2026");
+
+  const submit = () => {
+    const numericAmount = Number(
+      String(amount).replace(/[^\d.-]/g, "")
+    );
+
+    if (!store.trim()) {
+      Alert.alert(
+        "Missing Information",
+        "Enter the store or description."
+      );
+      return;
+    }
+
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      Alert.alert(
+        "Invalid Amount",
+        "Please enter a valid amount."
+      );
+      return;
+    }
+
+    onAdd({
+      name: store.trim(),
+      amount: numericAmount,
+      category,
+      note: note.trim(),
+      date,
+    });
+
+    setStore("");
+    setAmount("240.00");
+    setNote("");
+    setCategory("Shopping");
+    setSelectedDay(15);
+    setSelectedMonth("September");
+    setSelectedYear("2026");
+    setDate("September 15, 2026");
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <KeyboardAvoidingView
+        style={styles.addModalOverlay}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <View style={styles.addModalCard}>
+          <View style={styles.addModalHeader}>
+            <TouchableOpacity onPress={onClose} style={styles.closeCircle}>
+              <Ionicons name="close" size={20} color={COLORS.white} />
+            </TouchableOpacity>
+
+            <Text style={styles.addModalTitle}>Add Receipt</Text>
+
+            <View style={{ width: 34 }} />
+          </View>
+
+          <Text style={styles.addAmountLabel}>PRICE</Text>
+          <TextInput
+            style={styles.addAmountInput}
+            value={amount}
+            onChangeText={setAmount}
+            placeholder="₱240.00"
+            placeholderTextColor="#8C8D92"
+            keyboardType="decimal-pad"
+          />
+
+          <View style={styles.addCategoryRow}>
+            {categoryOptions.map((item) => (
+              <TouchableOpacity
+                key={item.value}
+                style={[
+                  styles.addCategoryOption,
+                  category === item.value && styles.addCategoryOptionActive,
+                ]}
+                onPress={() => setCategory(item.value)}
+              >
+                <Ionicons
+                  name={item.icon}
+                  size={18}
+                  color={category === item.value ? COLORS.black : COLORS.white}
+                />
+                <Text
+                  style={[
+                    styles.addCategoryText,
+                    category === item.value && styles.addCategoryTextActive,
+                  ]}
+                >
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.addFieldLabel}>Merchant</Text>
+          <TextInput
+            style={styles.addFieldInput}
+            value={store}
+            onChangeText={setStore}
+            placeholder="e.g. Starbucks"
+            placeholderTextColor="#66676E"
+          />
+
+          <Text style={styles.addFieldLabel}>Add a note...</Text>
+          <TextInput
+            style={styles.addFieldInput}
+            value={note}
+            onChangeText={setNote}
+            placeholder="Add a note..."
+            placeholderTextColor="#66676E"
+          />
+
+          <Text style={styles.addFieldLabel}>Date</Text>
+          <View style={styles.addDateWrapper}>
+            <TouchableOpacity
+              style={styles.addSelectWrapper}
+              onPress={() => setShowDateSheet(true)}
+            >
+              <Text style={styles.addSelectText}>{date}</Text>
+              <Ionicons name="calendar-outline" size={18} color={COLORS.white} />
+            </TouchableOpacity>
+          </View>
+
+          <PrimaryButton title="Save Expense" onPress={submit} />
+        </View>
+      </KeyboardAvoidingView>
+
+      <Modal
+        visible={showDateSheet}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowDateSheet(false)}
+      >
+        <View style={styles.dateSheetOverlay}>
+          <View style={styles.dateSheetCard}>
+            <View style={styles.dateSheetHandle} />
+
+            <View style={styles.dateSheetHeader}>
+              <Text style={styles.dateSheetTitle}>Select date</Text>
+              <TouchableOpacity onPress={() => setShowDateSheet(false)}>
+                <Ionicons name="close" size={22} color={COLORS.white} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.addDateDropdown}>
+              <View style={styles.addDateColumnHeaderRow}>
+                <Text style={styles.addDateColumnHeader}>Day</Text>
+                <Text style={styles.addDateColumnHeader}>Month</Text>
+                <Text style={styles.addDateColumnHeader}>Year</Text>
+              </View>
+
+              <View style={styles.addDateColumnRow}>
+                <ScrollView
+                  style={styles.addDateColumn}
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={styles.addDateColumnContent}
+                >
+                  {dayOptions.map((item) => (
+                    <TouchableOpacity
+                      key={item}
+                      style={[
+                        styles.addDateOption,
+                        selectedDay === item && styles.addDateOptionSelected,
+                      ]}
+                      onPress={() => {
+                        setSelectedDay(item);
+                        const nextDate = `${selectedMonth} ${item}, ${selectedYear}`;
+                        setDate(nextDate);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.addDateOptionText,
+                          selectedDay === item && styles.addDateOptionTextSelected,
+                        ]}
+                      >
+                        {item}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+
+                <ScrollView
+                  style={styles.addDateColumn}
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={styles.addDateColumnContent}
+                >
+                  {monthOptions.map((item) => (
+                    <TouchableOpacity
+                      key={item}
+                      style={[
+                        styles.addDateOption,
+                        selectedMonth === item && styles.addDateOptionSelected,
+                      ]}
+                      onPress={() => {
+                        setSelectedMonth(item);
+                        const nextDate = `${item} ${selectedDay}, ${selectedYear}`;
+                        setDate(nextDate);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.addDateOptionText,
+                          selectedMonth === item && styles.addDateOptionTextSelected,
+                        ]}
+                      >
+                        {item}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+
+                <View style={styles.yearInputColumn}>
+                  <TextInput
+                    style={styles.yearInput}
+                    value={selectedYear}
+                    onChangeText={(value) => {
+                      const cleaned = value.replace(/\D/g, "").slice(0, 4);
+                      setSelectedYear(cleaned || "");
+                      if (cleaned) {
+                        const nextDate = `${selectedMonth} ${selectedDay}, ${cleaned}`;
+                        setDate(nextDate);
+                      }
+                    }}
+                    placeholder="2026"
+                    placeholderTextColor="#7E7F85"
+                    keyboardType="numeric"
+                    maxLength={4}
+                    textAlign="center"
+                  />
+                </View>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={styles.dateSheetDoneButton}
+              onPress={() => setShowDateSheet(false)}
+            >
+              <Text style={styles.dateSheetDoneText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </Modal>
   );
 }
@@ -3122,6 +3430,260 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingTop: 22,
     paddingBottom: 30,
+  },
+
+  addModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "flex-end",
+  },
+
+  addModalCard: {
+    backgroundColor: COLORS.card,
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    paddingHorizontal: 22,
+    paddingTop: 18,
+    paddingBottom: 28,
+  },
+
+  addModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 18,
+  },
+
+  addModalTitle: {
+    color: COLORS.white,
+    fontSize: 18,
+    fontWeight: "700",
+  },
+
+  closeCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  addAmountLabel: {
+    color: COLORS.gray,
+    fontSize: 9,
+    letterSpacing: 1,
+    marginBottom: 6,
+    marginTop: 4,
+  },
+
+  addAmountInput: {
+    color: COLORS.white,
+    fontSize: 22,
+    fontWeight: "700",
+    paddingVertical: 4,
+    marginBottom: 18,
+  },
+
+  addCategoryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+
+  addCategoryOption: {
+    flex: 1,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: "#252830",
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: 4,
+  },
+
+  addCategoryOptionActive: {
+    backgroundColor: COLORS.green,
+  },
+
+  addCategoryText: {
+    color: COLORS.white,
+    fontSize: 8,
+    marginTop: 4,
+  },
+
+  addCategoryTextActive: {
+    color: COLORS.black,
+    fontWeight: "700",
+  },
+
+  addFieldLabel: {
+    color: COLORS.lightGray,
+    fontSize: 9,
+    marginBottom: 7,
+    marginTop: 10,
+  },
+
+  addFieldInput: {
+    height: 42,
+    borderWidth: 1,
+    borderColor: "#3A3B43",
+    borderRadius: 9,
+    color: COLORS.white,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+    fontSize: 11,
+  },
+
+  addDateWrapper: {
+    marginBottom: 18,
+    zIndex: 2,
+  },
+
+  addSelectWrapper: {
+    height: 42,
+    borderWidth: 1,
+    borderColor: "#3A3B43",
+    borderRadius: 9,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 12,
+    backgroundColor: "#21232A",
+  },
+
+  addSelectText: {
+    color: COLORS.white,
+    fontSize: 11,
+  },
+
+  dateSheetOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "flex-end",
+  },
+
+  dateSheetCard: {
+    backgroundColor: COLORS.card,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    paddingBottom: 20,
+  },
+
+  dateSheetHandle: {
+    width: 42,
+    height: 4,
+    backgroundColor: "#4B4D56",
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 12,
+  },
+
+  dateSheetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+
+  dateSheetTitle: {
+    color: COLORS.white,
+    fontSize: 18,
+    fontWeight: "700",
+  },
+
+  dateSheetDoneButton: {
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: COLORS.green,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 14,
+  },
+
+  dateSheetDoneText: {
+    color: COLORS.black,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+
+  addDateDropdown: {
+    backgroundColor: "#1B1D24",
+    borderWidth: 1,
+    borderColor: "#3A3B43",
+    borderRadius: 9,
+    padding: 6,
+    maxHeight: 220,
+  },
+
+  addDateColumnHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 6,
+    paddingHorizontal: 8,
+  },
+
+  addDateColumnHeader: {
+    flex: 1,
+    color: COLORS.gray,
+    fontSize: 8,
+    textAlign: "center",
+    letterSpacing: 0.5,
+  },
+
+  addDateColumnRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+
+  addDateColumn: {
+    flex: 1,
+    maxHeight: 180,
+    paddingHorizontal: 2,
+  },
+
+  addDateColumnContent: {
+    paddingBottom: 6,
+  },
+
+  addDateOption: {
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    marginBottom: 2,
+    alignItems: "center",
+  },
+
+  yearInputColumn: {
+    flex: 1,
+    maxHeight: 180,
+    justifyContent: "center",
+    paddingHorizontal: 2,
+  },
+
+  yearInput: {
+    height: 42,
+    borderRadius: 8,
+    backgroundColor: "#252830",
+    color: COLORS.white,
+    fontSize: 12,
+    fontWeight: "700",
+    paddingVertical: 0,
+  },
+
+  addDateOptionSelected: {
+    backgroundColor: COLORS.green,
+  },
+
+  addDateOptionText: {
+    color: COLORS.white,
+    fontSize: 10,
+  },
+
+  addDateOptionTextSelected: {
+    color: COLORS.black,
+    fontWeight: "700",
   },
 
   modalHeader: {
