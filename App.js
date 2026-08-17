@@ -225,6 +225,7 @@ export default function App() {
 
         {screen === "records" && (
           <RecordsScreen
+            user={user}
             expenses={expenses}
             onNavigate={navigate}
             onAddExpense={addExpense}
@@ -928,6 +929,15 @@ function DashboardScreen({
   const [addModalVisible, setAddModalVisible] =
     useState(false);
 
+  const handleNavigate = (page) => {
+    // Prevent users from accessing admin pages
+    if (user?.role === "user" && (page === "admin" || page === "adminDashboard")) {
+      Alert.alert("Access Denied", "You don't have permission to access the admin panel.");
+      return;
+    }
+    onNavigate(page);
+  };
+
   const total = expenses.reduce(
     (sum, expense) =>
       sum + Number(expense.amount),
@@ -996,17 +1006,6 @@ function DashboardScreen({
             }
           />
 
-          <QuickAction
-            icon="wallet-outline"
-            title="Budget"
-            onPress={() =>
-              Alert.alert(
-                "Budget",
-                "Budget management will be available here."
-              )
-            }
-          />
-
         </View>
 
         <SectionTitle
@@ -1026,7 +1025,7 @@ function DashboardScreen({
 
           <TouchableOpacity
             onPress={() =>
-              onNavigate("records")
+              handleNavigate("records")
             }
           >
 
@@ -1055,7 +1054,7 @@ function DashboardScreen({
 
       <BottomNavigation
         active="dashboard"
-        onNavigate={onNavigate}
+        onNavigate={handleNavigate}
       />
 
       <AddExpenseModal
@@ -1228,6 +1227,7 @@ function SpendingChart({
 ========================================================= */
 
 function RecordsScreen({
+  user,
   expenses,
   onNavigate,
   onAddExpense,
@@ -1237,6 +1237,15 @@ function RecordsScreen({
 
   const [addModalVisible, setAddModalVisible] =
     useState(false);
+
+  const handleNavigate = (page) => {
+    // Prevent users from accessing admin pages
+    if (user?.role === "user" && (page === "admin" || page === "adminDashboard")) {
+      Alert.alert("Access Denied", "You don't have permission to access the admin panel.");
+      return;
+    }
+    onNavigate(page);
+  };
 
   const filtered =
     expenses.filter((expense) =>
@@ -1362,7 +1371,7 @@ function RecordsScreen({
 
       <BottomNavigation
         active="records"
-        onNavigate={onNavigate}
+        onNavigate={handleNavigate}
       />
 
       <AddReceiptModal
@@ -1443,6 +1452,15 @@ function ProfileScreen({
   onNavigate,
   onLogout,
 }) {
+  const handleNavigate = (page) => {
+    // Prevent users from accessing admin pages
+    if (user?.role === "user" && (page === "admin" || page === "adminDashboard")) {
+      Alert.alert("Access Denied", "You don't have permission to access the admin panel.");
+      return;
+    }
+    onNavigate(page);
+  };
+
   const handleLogout = () => {
 
     Alert.alert(
@@ -1577,7 +1595,7 @@ function ProfileScreen({
 
       <BottomNavigation
         active="profile"
-        onNavigate={onNavigate}
+        onNavigate={handleNavigate}
       />
 
     </View>
@@ -1664,11 +1682,7 @@ function AdminDashboardScreen({
 }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [settingsToggle, setSettingsToggle] = useState({
-    aboutLogging: true,
-    aiSubGeneration: true,
-    maintenanceMode: false,
-  });
+  const [currentTab, setCurrentTab] = useState("dashboard"); // dashboard, users, aiActivity
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -1677,7 +1691,6 @@ function AdminDashboardScreen({
     department: "Operations",
   });
 
-  const totalAdmins = rows.filter((row) => row.role.toLowerCase() === "admin").length;
   const activeUsers = rows.filter((row) => row.status === "Active").length;
   const pendingUsers = rows.filter((row) => row.status === "Pending").length;
 
@@ -1710,7 +1723,7 @@ function AdminDashboardScreen({
     } else {
       onAddRecord({
         ...form,
-        id: Date.now(),git pull
+        id: Date.now(),
         name: form.name.trim(),
         email: form.email.trim(),
       });
@@ -1728,136 +1741,231 @@ function AdminDashboardScreen({
     ]);
   };
 
-  const toggleSetting = (key) => {
-    setSettingsToggle((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
-  };
-
   return (
     <View style={styles.dashboardPage}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
         
-        {/* Header with Greeting and Logout */}
-        <View style={styles.adminGreetingHeader}>
-          <View>
-            <Text style={styles.adminGreeting}>{user?.name || "Admin User"}</Text>
-            <View style={styles.adminBadgeRow}>
-              <View style={styles.adminBadge}>
-                <Text style={styles.adminBadgeText}>ADMIN</Text>
+        {/* Dashboard Tab */}
+        {currentTab === "dashboard" && (
+          <>
+            {/* Header with Greeting and Logout */}
+            <View style={styles.adminGreetingHeader}>
+              <View>
+                <Text style={styles.adminGreeting}>{user?.name || "Admin User"}</Text>
+                <View style={styles.adminBadgeRow}>
+                  <View style={styles.adminBadge}>
+                    <Text style={styles.adminBadgeText}>ADMIN</Text>
+                  </View>
+                </View>
+              </View>
+              <TouchableOpacity onPress={onLogout} style={styles.adminHeaderLogout}>
+                <Ionicons name="log-out-outline" size={22} color={COLORS.red} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Key Statistics */}
+            <View style={styles.adminStatRow}>
+              <AdminStatItem label="TOTAL USERS" value={String(rows.length)} />
+              <AdminStatItem label="TOTAL REVENUE" value="₱1.25M" />
+              <AdminStatItem label="TOTAL ORDERS" value={String(activeUsers)} />
+              <AdminStatItem label="DEPT STATUS" value="OPERATIONAL" color={COLORS.green} />
+            </View>
+
+            {/* Chart Visualization */}
+            <View style={styles.adminChartCard}>
+              <Text style={styles.adminChartTitle}>Overview</Text>
+              <View style={styles.chartPlaceholder}>
+                <View style={styles.chartBars}>
+                  <View style={[styles.chartBar, { height: '30%', backgroundColor: COLORS.green }]} />
+                  <View style={[styles.chartBar, { height: '50%', backgroundColor: COLORS.green }]} />
+                  <View style={[styles.chartBar, { height: '40%', backgroundColor: COLORS.green }]} />
+                  <View style={[styles.chartBar, { height: '60%', backgroundColor: COLORS.green }]} />
+                  <View style={[styles.chartBar, { height: '45%', backgroundColor: COLORS.green }]} />
+                </View>
               </View>
             </View>
-          </View>
-          <TouchableOpacity onPress={onLogout} style={styles.adminHeaderLogout}>
-            <Ionicons name="log-out-outline" size={22} color={COLORS.red} />
-          </TouchableOpacity>
-        </View>
 
-        {/* Key Statistics */}
-        <View style={styles.adminStatRow}>
-          <AdminStatItem label="TOTAL USERS" value={String(rows.length)} />
-          <AdminStatItem label="TOTAL REVENUE" value="₱1.25M" />
-          <AdminStatItem label="TOTAL ORDERS" value={String(activeUsers)} />
-          <AdminStatItem label="DEPT STATUS" value="OPERATIONAL" color={COLORS.green} />
-        </View>
-
-        {/* Chart Visualization */}
-        <View style={styles.adminChartCard}>
-          <Text style={styles.adminChartTitle}>Overview</Text>
-          <View style={styles.chartPlaceholder}>
-            <View style={styles.chartBars}>
-              <View style={[styles.chartBar, { height: '30%', backgroundColor: COLORS.green }]} />
-              <View style={[styles.chartBar, { height: '50%', backgroundColor: COLORS.green }]} />
-              <View style={[styles.chartBar, { height: '40%', backgroundColor: COLORS.green }]} />
-              <View style={[styles.chartBar, { height: '60%', backgroundColor: COLORS.green }]} />
-              <View style={[styles.chartBar, { height: '45%', backgroundColor: COLORS.green }]} />
+            {/* AI Processing Activity */}
+            <View style={styles.adminSection}>
+              <Text style={styles.adminSectionTitle}>AI Processing Activity</Text>
+              {rows.slice(0, 3).map((row, idx) => (
+                <View key={row.id} style={styles.activityRow}>
+                  <Ionicons 
+                    name={idx === 0 ? "checkmark-circle-outline" : idx === 1 ? "alert-circle-outline" : "time-outline"} 
+                    size={18} 
+                    color={idx === 0 ? COLORS.green : idx === 1 ? COLORS.yellow : COLORS.blue} 
+                  />
+                  <View style={styles.activityInfo}>
+                    <Text style={styles.activityName}>{row.name}</Text>
+                    <Text style={styles.activityDept}>{row.department}</Text>
+                  </View>
+                  <Text style={[styles.activityStatus, { color: idx === 0 ? COLORS.green : idx === 1 ? COLORS.yellow : COLORS.blue }]}>
+                    {idx === 0 ? "Success" : idx === 1 ? "Warning" : "Processing"}
+                  </Text>
+                </View>
+              ))}
             </View>
-          </View>
-        </View>
+          </>
+        )}
 
-        {/* Recent Users */}
-        <View style={styles.adminSection}>
-          <Text style={styles.adminSectionTitle}>Recent Users</Text>
-          {rows.slice(0, 3).map((row) => (
-            <View key={row.id} style={styles.recentUserRow}>
-              <View style={styles.userInfo}>
-                <Text style={styles.userName}>{row.name}</Text>
-                <Text style={styles.userRole}>{row.role}</Text>
+        {/* User Management Tab */}
+        {currentTab === "users" && (
+          <View style={styles.adminSection}>
+            <View style={styles.userManagementHeader}>
+              <Text style={styles.adminSectionTitle}>User Management</Text>
+              <TouchableOpacity style={styles.addUserButton} onPress={openCreate}>
+                <Ionicons name="add-circle-outline" size={20} color={COLORS.black} />
+                <Text style={styles.addUserText}>Add User</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* CRUD Table */}
+            <View style={styles.tableContainer}>
+              <View style={styles.tableHeaderRow}>
+                <Text style={[styles.tableHead, { flex: 2 }]}>Name</Text>
+                <Text style={[styles.tableHead, { flex: 2 }]}>Email</Text>
+                <Text style={[styles.tableHead, { flex: 1.2 }]}>Role</Text>
+                <Text style={[styles.tableHead, { flex: 1.2 }]}>Status</Text>
+                <Text style={[styles.tableHead, { flex: 1.5 }]}>Actions</Text>
               </View>
-              <View
-                style={[
-                  styles.statusIndicator,
-                  { backgroundColor: row.status === "Active" ? COLORS.green : row.status === "Pending" ? COLORS.yellow : COLORS.gray },
-                ]}
-              />
+
+              {rows.map((row) => (
+                <View key={row.id} style={styles.tableRow}>
+                  <Text style={[styles.tableCell, { flex: 2 }]}>{row.name}</Text>
+                  <Text style={[styles.tableCell, { flex: 2, color: COLORS.gray, fontSize: 7 }]}>{row.email}</Text>
+                  <Text style={[styles.tableCell, { flex: 1.2 }]}>{row.role}</Text>
+                  <View style={{ flex: 1.2, justifyContent: 'center' }}>
+                    <View style={[styles.statusBadge, { 
+                      backgroundColor: row.status === "Active" ? "rgba(25, 179, 148, 0.2)" : 
+                                      row.status === "Pending" ? "rgba(233, 185, 75, 0.2)" : 
+                                      "rgba(146, 147, 154, 0.2)"
+                    }]}>
+                      <Text style={[styles.statusBadgeText, {
+                        color: row.status === "Active" ? COLORS.green : 
+                               row.status === "Pending" ? COLORS.yellow : 
+                               COLORS.gray
+                      }]}>
+                        {row.status}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.rowActionGroup}>
+                    <TouchableOpacity 
+                      style={styles.editButton}
+                      onPress={() => openEdit(row)}
+                    >
+                      <Text style={styles.rowActionText}>Edit</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.deleteButton}
+                      onPress={() => deleteRecord(row.id)}
+                    >
+                      <Text style={[styles.rowActionText, { color: COLORS.red }]}>Delete</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
             </View>
-          ))}
-        </View>
+          </View>
+        )}
 
-        {/* All Processing Activity */}
-        <View style={styles.adminSection}>
-          <Text style={styles.adminSectionTitle}>All Processing Activity</Text>
-          {rows.slice(0, 2).map((row, idx) => (
-            <View key={row.id} style={styles.activityRow}>
-              <Ionicons name={idx === 0 ? "checkmark-circle-outline" : "alert-circle-outline"} size={18} color={idx === 0 ? COLORS.green : COLORS.yellow} />
-              <View style={styles.activityInfo}>
-                <Text style={styles.activityName}>{row.name}</Text>
-                <Text style={styles.activityDept}>{row.department}</Text>
-              </View>
-              <Text style={styles.activityStatus}>{idx === 0 ? "Success" : "Warning"}</Text>
+        {/* AI Processing Activity Tab */}
+        {currentTab === "aiActivity" && (
+          <View style={styles.adminSection}>
+            <Text style={styles.adminSectionTitle}>AI Processing Activity</Text>
+            <View style={styles.aiActivityContainer}>
+              {rows.map((row, idx) => (
+                <View key={row.id} style={styles.aiActivityCard}>
+                  <View style={styles.aiActivityHeader}>
+                    <View style={styles.aiActivityIconWrapper}>
+                      <Ionicons 
+                        name={idx % 3 === 0 ? "checkmark-circle-outline" : idx % 3 === 1 ? "alert-circle-outline" : "time-outline"} 
+                        size={24} 
+                        color={idx % 3 === 0 ? COLORS.green : idx % 3 === 1 ? COLORS.yellow : COLORS.blue}
+                      />
+                    </View>
+                    <View style={styles.aiActivityTitle}>
+                      <Text style={styles.aiActivityName}>{row.name}</Text>
+                      <Text style={styles.aiActivityDept}>{row.department}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.aiActivityFooter}>
+                    <Text style={[styles.aiActivityBadge, {
+                      color: idx % 3 === 0 ? COLORS.green : idx % 3 === 1 ? COLORS.yellow : COLORS.blue,
+                      borderColor: idx % 3 === 0 ? COLORS.green : idx % 3 === 1 ? COLORS.yellow : COLORS.blue
+                    }]}>
+                      {idx % 3 === 0 ? "✓ Completed" : idx % 3 === 1 ? "⚠ Warning" : "⏳ Processing"}
+                    </Text>
+                    <Text style={styles.aiActivityTime}>2 min ago</Text>
+                  </View>
+                </View>
+              ))}
             </View>
-          ))}
-        </View>
-
-        {/* Expense Categories */}
-        <View style={styles.adminSection}>
-          <Text style={styles.adminSectionTitle}>Expense Categories</Text>
-          <View style={styles.categoryRow}>
-            <Ionicons name="restaurant-outline" size={20} color={COLORS.yellow} />
-            <Text style={styles.categoryText}>Food</Text>
-            <Text style={styles.categoryAmount}>₱ 250</Text>
           </View>
-          <View style={styles.categoryRow}>
-            <Ionicons name="car-outline" size={20} color={COLORS.red} />
-            <Text style={styles.categoryText}>Transportation</Text>
-            <Text style={styles.categoryAmount}>₱ 150</Text>
+        )}
+
+        {/* Profile Tab */}
+        {currentTab === "profile" && (
+          <View style={{ paddingHorizontal: 0 }}>
+            {/* Profile Header */}
+            <Text style={styles.profileTitle}>Profile</Text>
+
+            {/* Avatar */}
+            <View style={styles.profileAvatar}>
+              <Ionicons name="person-outline" size={50} color={COLORS.green} />
+            </View>
+
+            {/* Name and Email */}
+            <Text style={styles.profileName}>{user?.name || "Admin"}</Text>
+            <Text style={styles.profileEmail}>{user?.email || "admin@receiptiq.com"}</Text>
+
+            {/* Stats Row */}
+            <View style={styles.statsRow}>
+              <Stat label="RECEIPTS" value="142" />
+              <Stat label="TOTAL SPENT" value="₱2,340" />
+              <Stat label="DAYS ACTIVE" value="18" />
+            </View>
+
+            {/* Account Section */}
+            <Text style={styles.profileSection}>ACCOUNT</Text>
+            <View style={styles.profileMenu}>
+              <ProfileOption icon="create-outline" title="Edit Profile" />
+              <ProfileOption icon="options-outline" title="Preferences" />
+              <ProfileOption icon="shield-checkmark-outline" title="Security" />
+            </View>
+
+            {/* Support Section */}
+            <Text style={styles.profileSection}>SUPPORT</Text>
+            <View style={styles.profileMenu}>
+              <ProfileOption icon="help-circle-outline" title="Help & Support" />
+            </View>
+
+            {/* Logout Button */}
+            <TouchableOpacity
+              style={styles.logoutButton}
+              activeOpacity={0.7}
+              onPress={() => {
+                Alert.alert("Log Out", "Are you sure you want to log out?", [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Log Out",
+                    style: "destructive",
+                    onPress: onLogout,
+                  },
+                ]);
+              }}
+            >
+              <Ionicons name="log-out-outline" size={20} color={COLORS.red} />
+              <Text style={styles.logoutText}>Log Out</Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.addCategoryButton}>
-            <Text style={styles.addCategoryText}>+ Add Category</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* System Settings */}
-        <View style={styles.adminSection}>
-          <Text style={styles.adminSectionTitle}>System Settings</Text>
-          <SettingToggle
-            label="About Logging"
-            value={settingsToggle.aboutLogging}
-            onToggle={() => toggleSetting("aboutLogging")}
-          />
-          <SettingToggle
-            label="AI Auto Generation"
-            value={settingsToggle.aiSubGeneration}
-            onToggle={() => toggleSetting("aiSubGeneration")}
-          />
-          <SettingToggle
-            label="Maintenance Mode"
-            value={settingsToggle.maintenanceMode}
-            onToggle={() => toggleSetting("maintenanceMode")}
-          />
-        </View>
-
-        {/* Manage All Users Button */}
-        <TouchableOpacity style={styles.manageAllUsersButton} onPress={openCreate}>
-          <Text style={styles.manageAllUsersText}>Manage all Users</Text>
-        </TouchableOpacity>
+        )}
 
       </ScrollView>
 
-      <BottomNavigation
-        active="dashboard"
-        onNavigate={() => {}}
+      <AdminBottomNavigation
+        active={currentTab}
+        onNavigate={setCurrentTab}
       />
 
       <AdminUserModal
@@ -1989,6 +2097,49 @@ function BottomNavigation({
         onPress={() =>
           onNavigate("profile")
         }
+      />
+
+    </View>
+  );
+}
+
+/* =========================================================
+   ADMIN BOTTOM NAVIGATION
+========================================================= */
+
+function AdminBottomNavigation({
+  active,
+  onNavigate,
+}) {
+  return (
+    <View style={styles.bottomNav}>
+
+      <NavItem
+        icon="home-outline"
+        activeIcon="home"
+        active={active === "dashboard"}
+        onPress={() => onNavigate("dashboard")}
+      />
+
+      <NavItem
+        icon="people-outline"
+        activeIcon="people"
+        active={active === "users"}
+        onPress={() => onNavigate("users")}
+      />
+
+      <NavItem
+        icon="flash-outline"
+        activeIcon="flash"
+        active={active === "aiActivity"}
+        onPress={() => onNavigate("aiActivity")}
+      />
+
+      <NavItem
+        icon="person-outline"
+        activeIcon="person"
+        active={active === "profile"}
+        onPress={() => onNavigate("profile")}
       />
 
     </View>
@@ -3569,6 +3720,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginHorizontal: 20,
     marginTop: 22,
+    marginBottom: 16,
   },
 
   profileAvatar: {
@@ -3580,7 +3732,8 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 20,
+    marginTop: 24,
+    marginBottom: 12,
   },
 
   profileName: {
@@ -3588,7 +3741,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 14,
     fontWeight: "700",
-    marginTop: 9,
+    marginTop: 6,
+    marginBottom: 4,
   },
 
   profileEmail: {
@@ -3601,8 +3755,8 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: "row",
     paddingHorizontal: 20,
-    marginTop: 18,
-    marginBottom: 24,
+    marginTop: 20,
+    marginBottom: 28,
   },
 
   statBox: {
@@ -3631,7 +3785,9 @@ const styles = StyleSheet.create({
     fontSize: 7,
     letterSpacing: 1,
     marginHorizontal: 20,
-    marginBottom: 7,
+    marginBottom: 10,
+    marginTop: 6,
+    fontWeight: "700",
   },
 
   profileMenu: {
@@ -3667,13 +3823,14 @@ const styles = StyleSheet.create({
   logoutButton: {
     height: 46,
     borderRadius: 23,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: COLORS.red,
     marginHorizontal: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 5,
+    marginTop: 20,
+    marginBottom: 20,
   },
 
   logoutText: {
@@ -3812,6 +3969,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginBottom: 6,
     marginTop: 4,
+    textAlign: "center",
   },
 
   addAmountInput: {
@@ -3820,6 +3978,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     paddingVertical: 4,
     marginBottom: 18,
+    textAlign: "center",
   },
 
   addCategoryRow: {
@@ -4532,6 +4691,173 @@ const styles = StyleSheet.create({
     color: COLORS.black,
     fontSize: 14,
     fontWeight: "700",
+  },
+
+  /* USER MANAGEMENT STYLES */
+
+  userManagementHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+
+  addUserButton: {
+    backgroundColor: COLORS.green,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+
+  addUserText: {
+    color: COLORS.black,
+    fontWeight: "700",
+    fontSize: 10,
+    marginLeft: 4,
+  },
+
+  tableContainer: {
+    borderRadius: 10,
+    overflow: "hidden",
+  },
+
+  tableHeaderRow: {
+    flexDirection: "row",
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    backgroundColor: COLORS.card,
+    borderBottomWidth: 2,
+    borderBottomColor: COLORS.border,
+  },
+
+  tableHead: {
+    flex: 1,
+    color: COLORS.gray,
+    fontSize: 8,
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+
+  tableRow: {
+    flexDirection: "row",
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    alignItems: "center",
+  },
+
+  tableCell: {
+    flex: 1,
+    color: COLORS.white,
+    fontSize: 9,
+    paddingRight: 4,
+  },
+
+  statusBadge: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    alignItems: "center",
+  },
+
+  statusBadgeText: {
+    fontSize: 8,
+    fontWeight: "700",
+  },
+
+  rowActionGroup: {
+    flex: 1.5,
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+
+  editButton: {
+    backgroundColor: "#2B3348",
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+
+  deleteButton: {
+    backgroundColor: "rgba(255,69,69,0.15)",
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+
+  rowActionText: {
+    color: COLORS.white,
+    fontSize: 8,
+    fontWeight: "700",
+  },
+
+  /* AI ACTIVITY STYLES */
+
+  aiActivityContainer: {
+    gap: 12,
+  },
+
+  aiActivityCard: {
+    backgroundColor: COLORS.navy,
+    borderRadius: 12,
+    padding: 14,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.green,
+  },
+
+  aiActivityHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 12,
+  },
+
+  aiActivityIconWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: "rgba(25, 179, 148, 0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+
+  aiActivityTitle: {
+    flex: 1,
+  },
+
+  aiActivityName: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.white,
+    marginBottom: 3,
+  },
+
+  aiActivityDept: {
+    fontSize: 10,
+    color: COLORS.gray,
+  },
+
+  aiActivityFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  aiActivityBadge: {
+    fontSize: 9,
+    fontWeight: "700",
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+
+  aiActivityTime: {
+    fontSize: 9,
+    color: COLORS.gray,
   },
 
 });
