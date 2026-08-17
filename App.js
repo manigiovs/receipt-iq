@@ -956,17 +956,6 @@ function DashboardScreen({
             }
           />
 
-          <QuickAction
-            icon="wallet-outline"
-            title="Budget"
-            onPress={() =>
-              Alert.alert(
-                "Budget",
-                "Budget management will be available here."
-              )
-            }
-          />
-
         </View>
 
         <SectionTitle
@@ -1740,16 +1729,6 @@ function MobileMenu({
             Alert.alert(
               "Features",
               "Receipt scanning, expense categorization, reports, search and spending analysis."
-            )
-          }
-        />
-
-        <MenuItem
-          title="Pricing"
-          onPress={() =>
-            Alert.alert(
-              "Pricing",
-              "ReceiptIQ is currently free during development."
             )
           }
         />
@@ -3475,6 +3454,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginBottom: 6,
     marginTop: 4,
+    textAlign: "center",
   },
 
   addAmountInput: {
@@ -3483,6 +3463,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     paddingVertical: 4,
     marginBottom: 18,
+    textAlign: "center",
   },
 
   addCategoryRow: {
