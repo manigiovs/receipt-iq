@@ -37,11 +37,13 @@ const COLORS = {
   blue: "#5D7EFF",
   yellow: "#E9B94B",
 };
-const logout = () => {
-  setUser(null);
-  setMenuVisible(false);
-  setScreen("signin");
-};
+
+const defaultAdminRows = [
+  { id: 1, name: "Alice Johnson", email: "alice@receiptiq.com", role: "Admin", status: "Active", department: "Operations" },
+  { id: 2, name: "Mark Lee", email: "mark@receiptiq.com", role: "Manager", status: "Active", department: "Finance" },
+  { id: 3, name: "Sara Gomez", email: "sara@receiptiq.com", role: "User", status: "Pending", department: "Support" },
+  { id: 4, name: "Daniel Cruz", email: "daniel@receiptiq.com", role: "User", status: "Inactive", department: "Sales" },
+];
 
 /* =========================================================
    MAIN APP
@@ -51,6 +53,10 @@ export default function App() {
   const [screen, setScreen] = useState("landing");
   const [menuVisible, setMenuVisible] = useState(false);
   const [user, setUser] = useState(null);
+  const [accounts, setAccounts] = useState([
+    { id: 1, name: "Admin User", email: "admin@receiptiq.com", password: "admin123", role: "admin" },
+    { id: 2, name: "Demo User", email: "user@receiptiq.com", password: "user123", role: "user" },
+  ]);
 
   const [expenses, setExpenses] = useState([
     {
@@ -76,18 +82,12 @@ export default function App() {
     },
   ]);
 
-  /* =======================================================
-     NAVIGATION
-  ======================================================= */
+  const [adminRows, setAdminRows] = useState(defaultAdminRows);
 
   const navigate = (page) => {
     setMenuVisible(false);
     setScreen(page);
   };
-
-  /* =======================================================
-     ADD EXPENSE
-  ======================================================= */
 
   const addExpense = (expense) => {
     setExpenses((previous) => [
@@ -100,16 +100,65 @@ export default function App() {
     ]);
   };
 
-  /* =======================================================
-     LOGOUT
-  ======================================================= */
+  const handleCreateAccount = (newUser) => {
+    const email = String(newUser.email || "").trim().toLowerCase();
+    const password = String(newUser.password || "");
+
+    if (!email || !password) {
+      Alert.alert("Account Error", "Please complete all fields.");
+      return;
+    }
+
+    if (accounts.some((account) => account.email.toLowerCase() === email)) {
+      Alert.alert("Account Exists", "That email is already registered.");
+      return;
+    }
+
+    const nextUser = {
+      id: Date.now(),
+      name: String(newUser.name || "User").trim(),
+      email,
+      password,
+      role: "user",
+    };
+
+    setAccounts((previous) => [nextUser, ...previous]);
+    setUser(nextUser);
+    navigate("dashboard");
+  };
+
+  const handleLogin = ({ email, password }) => {
+    const normalizedEmail = String(email || "").trim().toLowerCase();
+    const passwordValue = String(password || "");
+    const matched = accounts.find(
+      (account) => account.email.toLowerCase() === normalizedEmail && account.password === passwordValue
+    );
+
+    if (!matched) {
+      Alert.alert("Login Failed", "Email or password is incorrect.");
+      return;
+    }
+
+    setUser(matched);
+    navigate(matched.role === "admin" ? "admin" : "dashboard");
+  };
 
   const logout = () => {
     setUser(null);
     setMenuVisible(false);
-
-    // Go to SIGN IN after logout
     setScreen("signin");
+  };
+
+  const addAdminRecord = (record) => {
+    setAdminRows((previous) => [record, ...previous]);
+  };
+
+  const editAdminRecord = (id, updatedRecord) => {
+    setAdminRows((previous) => previous.map((row) => (row.id === id ? { ...row, ...updatedRecord } : row)));
+  };
+
+  const deleteAdminRecord = (id) => {
+    setAdminRows((previous) => previous.filter((row) => row.id !== id));
   };
 
   return (
@@ -121,8 +170,6 @@ export default function App() {
 
       <View style={styles.container}>
 
-        {/* LANDING */}
-
         {screen === "landing" && (
           <LandingScreen
             onMenu={() => setMenuVisible(true)}
@@ -132,8 +179,6 @@ export default function App() {
           />
         )}
 
-        {/* HOW IT WORKS */}
-
         {screen === "how" && (
           <HowItWorksScreen
             onMenu={() => setMenuVisible(true)}
@@ -142,35 +187,23 @@ export default function App() {
           />
         )}
 
-        {/* CREATE ACCOUNT */}
-
         {screen === "create" && (
           <CreateAccountScreen
             onBack={() => navigate("landing")}
             onSignIn={() => navigate("signin")}
-            onCreate={(newUser) => {
-              setUser(newUser);
-              navigate("dashboard");
-            }}
+            onCreate={handleCreateAccount}
           />
         )}
-
-        {/* SIGN IN */}
 
         {screen === "signin" && (
           <SignInScreen
             onBack={() => navigate("landing")}
             onCreate={() => navigate("create")}
-            onLogin={(loggedUser) => {
-              setUser(loggedUser);
-              navigate("dashboard");
-            }}
+            onLogin={handleLogin}
           />
         )}
 
-        {/* DASHBOARD */}
-
-        {screen === "dashboard" && (
+        {(screen === "dashboard" || screen === "user") && (
           <DashboardScreen
             user={user}
             expenses={expenses}
@@ -179,7 +212,16 @@ export default function App() {
           />
         )}
 
-        {/* RECORDS */}
+        {(screen === "admin" || screen === "adminDashboard") && (
+          <AdminDashboardScreen
+            user={user}
+            rows={adminRows}
+            onLogout={logout}
+            onAddRecord={addAdminRecord}
+            onEditRecord={editAdminRecord}
+            onDeleteRecord={deleteAdminRecord}
+          />
+        )}
 
         {screen === "records" && (
           <RecordsScreen
@@ -189,8 +231,6 @@ export default function App() {
           />
         )}
 
-        {/* PROFILE */}
-
         {screen === "profile" && (
           <ProfileScreen
             user={user}
@@ -198,8 +238,6 @@ export default function App() {
             onLogout={logout}
           />
         )}
-
-        {/* MENU */}
 
         <MobileMenu
           visible={menuVisible}
@@ -616,6 +654,7 @@ function CreateAccountScreen({
     onCreate({
       name: name.trim(),
       email: email.trim(),
+      password,
     });
   };
 
@@ -748,6 +787,7 @@ function SignInScreen({
       name:
         email.split("@")[0] || "User",
       email: email.trim(),
+      password,
     });
   };
 
@@ -953,6 +993,17 @@ function DashboardScreen({
             title="Add"
             onPress={() =>
               setAddModalVisible(true)
+            }
+          />
+
+          <QuickAction
+            icon="wallet-outline"
+            title="Budget"
+            onPress={() =>
+              Alert.alert(
+                "Budget",
+                "Budget management will be available here."
+              )
             }
           />
 
@@ -1600,6 +1651,303 @@ function ProfileOption({
 }
 
 /* =========================================================
+   ADMIN DASHBOARD
+========================================================= */
+
+function AdminDashboardScreen({
+  user,
+  rows,
+  onLogout,
+  onAddRecord,
+  onEditRecord,
+  onDeleteRecord,
+}) {
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [settingsToggle, setSettingsToggle] = useState({
+    aboutLogging: true,
+    aiSubGeneration: true,
+    maintenanceMode: false,
+  });
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    role: "User",
+    status: "Active",
+    department: "Operations",
+  });
+
+  const totalAdmins = rows.filter((row) => row.role.toLowerCase() === "admin").length;
+  const activeUsers = rows.filter((row) => row.status === "Active").length;
+  const pendingUsers = rows.filter((row) => row.status === "Pending").length;
+
+  const openCreate = () => {
+    setEditingId(null);
+    setForm({ name: "", email: "", role: "User", status: "Active", department: "Operations" });
+    setModalVisible(true);
+  };
+
+  const openEdit = (row) => {
+    setEditingId(row.id);
+    setForm({
+      name: row.name,
+      email: row.email,
+      role: row.role,
+      status: row.status,
+      department: row.department,
+    });
+    setModalVisible(true);
+  };
+
+  const saveRecord = () => {
+    if (!form.name.trim() || !form.email.trim()) {
+      Alert.alert("Missing info", "Name and email are required.");
+      return;
+    }
+
+    if (editingId) {
+      onEditRecord(editingId, { ...form, name: form.name.trim(), email: form.email.trim() });
+    } else {
+      onAddRecord({
+        ...form,
+        id: Date.now(),git pull
+        name: form.name.trim(),
+        email: form.email.trim(),
+      });
+    }
+
+    setModalVisible(false);
+    setEditingId(null);
+    setForm({ name: "", email: "", role: "User", status: "Active", department: "Operations" });
+  };
+
+  const deleteRecord = (id) => {
+    Alert.alert("Delete user", "Are you sure you want to remove this record?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Delete", style: "destructive", onPress: () => onDeleteRecord(id) },
+    ]);
+  };
+
+  const toggleSetting = (key) => {
+    setSettingsToggle((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  return (
+    <View style={styles.dashboardPage}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+        
+        {/* Header with Greeting and Logout */}
+        <View style={styles.adminGreetingHeader}>
+          <View>
+            <Text style={styles.adminGreeting}>{user?.name || "Admin User"}</Text>
+            <View style={styles.adminBadgeRow}>
+              <View style={styles.adminBadge}>
+                <Text style={styles.adminBadgeText}>ADMIN</Text>
+              </View>
+            </View>
+          </View>
+          <TouchableOpacity onPress={onLogout} style={styles.adminHeaderLogout}>
+            <Ionicons name="log-out-outline" size={22} color={COLORS.red} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Key Statistics */}
+        <View style={styles.adminStatRow}>
+          <AdminStatItem label="TOTAL USERS" value={String(rows.length)} />
+          <AdminStatItem label="TOTAL REVENUE" value="₱1.25M" />
+          <AdminStatItem label="TOTAL ORDERS" value={String(activeUsers)} />
+          <AdminStatItem label="DEPT STATUS" value="OPERATIONAL" color={COLORS.green} />
+        </View>
+
+        {/* Chart Visualization */}
+        <View style={styles.adminChartCard}>
+          <Text style={styles.adminChartTitle}>Overview</Text>
+          <View style={styles.chartPlaceholder}>
+            <View style={styles.chartBars}>
+              <View style={[styles.chartBar, { height: '30%', backgroundColor: COLORS.green }]} />
+              <View style={[styles.chartBar, { height: '50%', backgroundColor: COLORS.green }]} />
+              <View style={[styles.chartBar, { height: '40%', backgroundColor: COLORS.green }]} />
+              <View style={[styles.chartBar, { height: '60%', backgroundColor: COLORS.green }]} />
+              <View style={[styles.chartBar, { height: '45%', backgroundColor: COLORS.green }]} />
+            </View>
+          </View>
+        </View>
+
+        {/* Recent Users */}
+        <View style={styles.adminSection}>
+          <Text style={styles.adminSectionTitle}>Recent Users</Text>
+          {rows.slice(0, 3).map((row) => (
+            <View key={row.id} style={styles.recentUserRow}>
+              <View style={styles.userInfo}>
+                <Text style={styles.userName}>{row.name}</Text>
+                <Text style={styles.userRole}>{row.role}</Text>
+              </View>
+              <View
+                style={[
+                  styles.statusIndicator,
+                  { backgroundColor: row.status === "Active" ? COLORS.green : row.status === "Pending" ? COLORS.yellow : COLORS.gray },
+                ]}
+              />
+            </View>
+          ))}
+        </View>
+
+        {/* All Processing Activity */}
+        <View style={styles.adminSection}>
+          <Text style={styles.adminSectionTitle}>All Processing Activity</Text>
+          {rows.slice(0, 2).map((row, idx) => (
+            <View key={row.id} style={styles.activityRow}>
+              <Ionicons name={idx === 0 ? "checkmark-circle-outline" : "alert-circle-outline"} size={18} color={idx === 0 ? COLORS.green : COLORS.yellow} />
+              <View style={styles.activityInfo}>
+                <Text style={styles.activityName}>{row.name}</Text>
+                <Text style={styles.activityDept}>{row.department}</Text>
+              </View>
+              <Text style={styles.activityStatus}>{idx === 0 ? "Success" : "Warning"}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Expense Categories */}
+        <View style={styles.adminSection}>
+          <Text style={styles.adminSectionTitle}>Expense Categories</Text>
+          <View style={styles.categoryRow}>
+            <Ionicons name="restaurant-outline" size={20} color={COLORS.yellow} />
+            <Text style={styles.categoryText}>Food</Text>
+            <Text style={styles.categoryAmount}>₱ 250</Text>
+          </View>
+          <View style={styles.categoryRow}>
+            <Ionicons name="car-outline" size={20} color={COLORS.red} />
+            <Text style={styles.categoryText}>Transportation</Text>
+            <Text style={styles.categoryAmount}>₱ 150</Text>
+          </View>
+          <TouchableOpacity style={styles.addCategoryButton}>
+            <Text style={styles.addCategoryText}>+ Add Category</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* System Settings */}
+        <View style={styles.adminSection}>
+          <Text style={styles.adminSectionTitle}>System Settings</Text>
+          <SettingToggle
+            label="About Logging"
+            value={settingsToggle.aboutLogging}
+            onToggle={() => toggleSetting("aboutLogging")}
+          />
+          <SettingToggle
+            label="AI Auto Generation"
+            value={settingsToggle.aiSubGeneration}
+            onToggle={() => toggleSetting("aiSubGeneration")}
+          />
+          <SettingToggle
+            label="Maintenance Mode"
+            value={settingsToggle.maintenanceMode}
+            onToggle={() => toggleSetting("maintenanceMode")}
+          />
+        </View>
+
+        {/* Manage All Users Button */}
+        <TouchableOpacity style={styles.manageAllUsersButton} onPress={openCreate}>
+          <Text style={styles.manageAllUsersText}>Manage all Users</Text>
+        </TouchableOpacity>
+
+      </ScrollView>
+
+      <BottomNavigation
+        active="dashboard"
+        onNavigate={() => {}}
+      />
+
+      <AdminUserModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSave={saveRecord}
+        onChange={setForm}
+        form={form}
+        title={editingId ? "Edit User" : "Create User"}
+      />
+    </View>
+  );
+}
+
+function StatCard({ label, value, accent }) {
+  return (
+    <View style={[styles.statCard, { borderColor: accent }]}>
+      <Text style={[styles.statCardValue, { color: accent }]}>{value}</Text>
+      <Text style={styles.statCardLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function AdminStatItem({ label, value, color = COLORS.green }) {
+  return (
+    <View style={styles.adminStatItem}>
+      <Text style={styles.adminStatValue}>{value}</Text>
+      <Text style={styles.adminStatLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function SettingToggle({ label, value, onToggle }) {
+  return (
+    <View style={styles.settingRow}>
+      <Text style={styles.settingLabel}>{label}</Text>
+      <TouchableOpacity
+        style={[styles.toggleSwitch, { backgroundColor: value ? COLORS.green : COLORS.gray }]}
+        onPress={onToggle}
+      >
+        <View
+          style={[
+            styles.toggleThumb,
+            {
+              transform: [{ translateX: value ? 20 : 0 }],
+            },
+          ]}
+        />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function AdminUserModal({ visible, onClose, onSave, onChange, form, title }) {
+  const updateField = (field, value) => onChange((prev) => ({ ...prev, [field]: value }));
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <View style={styles.modalCard}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>{title}</Text>
+            <TouchableOpacity onPress={onClose}>
+              <Ionicons name="close" size={24} color={COLORS.white} />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.modalLabel}>Name</Text>
+          <TextInput style={styles.modalInput} value={form.name} onChangeText={(text) => updateField("name", text)} placeholder="Enter full name" placeholderTextColor="#66676E" />
+
+          <Text style={styles.modalLabel}>Email</Text>
+          <TextInput style={styles.modalInput} value={form.email} onChangeText={(text) => updateField("email", text)} placeholder="name@email.com" placeholderTextColor="#66676E" keyboardType="email-address" />
+
+          <Text style={styles.modalLabel}>Role</Text>
+          <TextInput style={styles.modalInput} value={form.role} onChangeText={(text) => updateField("role", text)} placeholder="Admin / User / Manager" placeholderTextColor="#66676E" />
+
+          <Text style={styles.modalLabel}>Status</Text>
+          <TextInput style={styles.modalInput} value={form.status} onChangeText={(text) => updateField("status", text)} placeholder="Active / Pending / Inactive" placeholderTextColor="#66676E" />
+
+          <Text style={styles.modalLabel}>Department</Text>
+          <TextInput style={styles.modalInput} value={form.department} onChangeText={(text) => updateField("department", text)} placeholder="Operations" placeholderTextColor="#66676E" />
+
+          <PrimaryButton title="Save" onPress={onSave} />
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+/* =========================================================
    BOTTOM NAVIGATION
 ========================================================= */
 
@@ -1729,6 +2077,16 @@ function MobileMenu({
             Alert.alert(
               "Features",
               "Receipt scanning, expense categorization, reports, search and spending analysis."
+            )
+          }
+        />
+
+        <MenuItem
+          title="Pricing"
+          onPress={() =>
+            Alert.alert(
+              "Pricing",
+              "ReceiptIQ is currently free during development."
             )
           }
         />
@@ -3454,7 +3812,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginBottom: 6,
     marginTop: 4,
-    textAlign: "center",
   },
 
   addAmountInput: {
@@ -3463,7 +3820,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     paddingVertical: 4,
     marginBottom: 18,
-    textAlign: "center",
   },
 
   addCategoryRow: {
@@ -3764,6 +4120,418 @@ const styles = StyleSheet.create({
       "rgba(0,0,0,0.75)",
     alignItems: "center",
     justifyContent: "center",
+  },
+
+  adminScroll: {
+    paddingBottom: 40,
+    paddingHorizontal: 20,
+  },
+
+  adminHeader: {
+    paddingTop: 25,
+    paddingBottom: 14,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  adminLogoutButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  adminStatsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginBottom: 18,
+  },
+
+  statCard: {
+    width: "48%",
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    marginBottom: 10,
+  },
+
+  statCardValue: {
+    fontSize: 18,
+    fontWeight: "800",
+    marginBottom: 4,
+  },
+
+  statCardLabel: {
+    color: COLORS.lightGray,
+    fontSize: 8,
+    letterSpacing: 1,
+  },
+
+  adminPanel: {
+    backgroundColor: COLORS.card,
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 20,
+  },
+
+  adminPanelHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
+
+  adminPanelTitle: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: "700",
+  },
+
+  addUserButton: {
+    backgroundColor: COLORS.green,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  addUserText: {
+    color: COLORS.black,
+    fontWeight: "700",
+    fontSize: 10,
+    marginLeft: 4,
+  },
+
+  tableHeaderRow: {
+    flexDirection: "row",
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#2C2E36",
+  },
+
+  tableHead: {
+    flex: 1,
+    color: COLORS.gray,
+    fontSize: 7,
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+
+  tableRow: {
+    flexDirection: "row",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#2C2E36",
+  },
+
+  tableCell: {
+    flex: 1,
+    color: COLORS.white,
+    fontSize: 8,
+    paddingRight: 4,
+  },
+
+  rowActionGroup: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+
+  editButton: {
+    backgroundColor: "#2B3348",
+    paddingVertical: 5,
+    paddingHorizontal: 7,
+    borderRadius: 8,
+  },
+
+  deleteButton: {
+    backgroundColor: "rgba(255,69,69,0.15)",
+    paddingVertical: 5,
+    paddingHorizontal: 7,
+    borderRadius: 8,
+  },
+
+  rowActionText: {
+    color: COLORS.white,
+    fontSize: 7,
+    fontWeight: "700",
+  },
+
+  /* ADMIN DASHBOARD REDESIGN */
+
+  adminGreetingHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 25,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+
+  adminGreeting: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: COLORS.white,
+    marginBottom: 8,
+  },
+
+  adminBadgeRow: {
+    flexDirection: "row",
+  },
+
+  adminBadge: {
+    backgroundColor: COLORS.red,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+
+  adminBadgeText: {
+    color: COLORS.white,
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+
+  adminHeaderLogout: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,69,69,0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  adminStatRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 15,
+    paddingVertical: 20,
+  },
+
+  adminStatItem: {
+    flex: 1,
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 10,
+    marginHorizontal: 5,
+    alignItems: "center",
+  },
+
+  adminStatValue: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: COLORS.white,
+    marginBottom: 6,
+  },
+
+  adminStatLabel: {
+    fontSize: 8,
+    fontWeight: "700",
+    color: COLORS.gray,
+    letterSpacing: 1,
+  },
+
+  adminChartCard: {
+    marginHorizontal: 15,
+    marginVertical: 15,
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    padding: 16,
+  },
+
+  adminChartTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.white,
+    marginBottom: 16,
+  },
+
+  chartPlaceholder: {
+    height: 140,
+    backgroundColor: "rgba(25, 179, 148, 0.08)",
+    borderRadius: 10,
+    padding: 12,
+    justifyContent: "flex-end",
+    alignItems: "center",
+  },
+
+  chartBars: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "flex-end",
+    height: 100,
+    width: "100%",
+  },
+
+  chartBar: {
+    width: 12,
+    borderRadius: 4,
+  },
+
+  adminSection: {
+    marginHorizontal: 15,
+    marginVertical: 12,
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    padding: 16,
+  },
+
+  adminSectionTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.white,
+    marginBottom: 12,
+  },
+
+  recentUserRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+
+  userInfo: {
+    flex: 1,
+  },
+
+  userName: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: COLORS.white,
+    marginBottom: 2,
+  },
+
+  userRole: {
+    fontSize: 10,
+    color: COLORS.gray,
+  },
+
+  statusIndicator: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+
+  activityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+
+  activityInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+
+  activityName: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: COLORS.white,
+    marginBottom: 2,
+  },
+
+  activityDept: {
+    fontSize: 10,
+    color: COLORS.gray,
+  },
+
+  activityStatus: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: COLORS.green,
+  },
+
+  categoryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+
+  categoryText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "600",
+    color: COLORS.white,
+    marginLeft: 12,
+  },
+
+  categoryAmount: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.green,
+  },
+
+  addCategoryButton: {
+    alignItems: "center",
+    paddingVertical: 12,
+    marginTop: 8,
+  },
+
+  addCategoryText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: COLORS.green,
+  },
+
+  settingRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+
+  settingLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: COLORS.white,
+  },
+
+  toggleSwitch: {
+    width: 40,
+    height: 24,
+    borderRadius: 12,
+    padding: 2,
+    justifyContent: "center",
+  },
+
+  toggleThumb: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: COLORS.white,
+  },
+
+  manageAllUsersButton: {
+    marginHorizontal: 15,
+    marginVertical: 20,
+    backgroundColor: COLORS.green,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+
+  manageAllUsersText: {
+    color: COLORS.black,
+    fontSize: 14,
+    fontWeight: "700",
   },
 
 });
