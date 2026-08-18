@@ -1,0 +1,106 @@
+-- phpMyAdmin SQL Dump
+-- version 5.2.1
+-- https://www.phpmyadmin.net/
+--
+-- Host: 127.0.0.1
+-- Generation Time: Aug 18, 2026 at 10:05 AM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.2.12
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
+CREATE DATABASE IF NOT EXISTS `receipt_iq_db`;
+USE `receipt_iq_db`;
+
+CREATE TABLE `ai_tbl` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `image_path` varchar(255) NOT NULL,
+  `merchant_name` varchar(255) DEFAULT NULL,
+  `receipt_date` date DEFAULT NULL,
+  `amount` decimal(10,2) DEFAULT NULL,
+  `category` varchar(100) DEFAULT NULL,
+  `ai_processing_activity` varchar(255) DEFAULT NULL,
+  `ai_extracted_text` text DEFAULT NULL,
+  `ai_confidence` decimal(5,2) DEFAULT NULL,
+  `status` varchar(50) DEFAULT 'pending',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `recordstbl` (
+  `id` int(11) NOT NULL,
+  `fullname_user` varchar(255) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `email` varchar(150) NOT NULL,
+  `price` decimal(10,2) NOT NULL,
+  `category` varchar(255) NOT NULL,
+  `date` date NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `review_tbl` (
+  `id` int(11) NOT NULL,
+  `receipt_image` varchar(255) NOT NULL,
+  `merchant_name` varchar(255) NOT NULL,
+  `total` int(11) NOT NULL,
+  `price` decimal(10,2) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `expenses_tbl` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `merchant_name` varchar(255) NOT NULL,
+  `category` varchar(100) NOT NULL,
+  `amount` decimal(10,2) NOT NULL,
+  `receipt_date` date DEFAULT NULL,
+  `description` text DEFAULT NULL,
+  `image_path` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `user` (
+  `id` int(11) NOT NULL,
+  `fullname_user` varchar(255) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `email` varchar(150) NOT NULL,
+  `price` decimal(10,2) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+ALTER TABLE `ai_tbl`
+  ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `recordstbl`
+  ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `expenses_tbl`
+  ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `user`
+  ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `ai_tbl`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `recordstbl`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `expenses_tbl`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `user`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+INSERT INTO `user` (`fullname_user`, `password`, `email`, `price`) VALUES
+('Admin User', '$2y$10$N4i1j2uM3mVbYgWn6lP6qOVQ0zvrF3hIK9wUbuF0F1V/0w3Z1U4M2', 'admin@receiptiq.com', 0.00),
+('Demo User', '$2y$10$g7X4BZamc9O9o8L0k4W7b.nf.kZcpR2qq2bo8vBfXGg1ZlFaDFM0K', 'user@receiptiq.com', 0.00);
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

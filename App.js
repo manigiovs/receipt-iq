@@ -38,6 +38,11 @@ const COLORS = {
   yellow: "#E9B94B",
 };
 
+const API_BASE_URL =
+  Platform.OS === "android"
+    ? "http://10.0.2.2/receiptiq/api"
+    : "http://localhost/receiptiq/api";
+
 const defaultAdminRows = [
   { id: 1, name: "Alice Johnson", email: "alice@receiptiq.com", role: "Admin", status: "Active", department: "Operations" },
   { id: 2, name: "Mark Lee", email: "mark@receiptiq.com", role: "Manager", status: "Active", department: "Finance" },
@@ -53,43 +58,71 @@ export default function App() {
   const [screen, setScreen] = useState("landing");
   const [menuVisible, setMenuVisible] = useState(false);
   const [user, setUser] = useState(null);
-  const [accounts, setAccounts] = useState([
-    { id: 1, name: "Admin User", email: "admin@receiptiq.com", password: "admin123", role: "admin" },
-    { id: 2, name: "Demo User", email: "user@receiptiq.com", password: "user123", role: "user" },
-  ]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [expenses, setExpenses] = useState([]);
 
-  const [expenses, setExpenses] = useState([
-    {
-      id: 1,
-      name: "Uniqlo",
-      category: "Shopping",
-      amount: 534.4,
-      date: "Today",
-    },
-    {
-      id: 2,
-      name: "Jollibee",
-      category: "Food & Dining",
-      amount: 520,
-      date: "Today",
-    },
-    {
-      id: 3,
-      name: "Netflix",
-      category: "Entertainment",
-      amount: 459,
-      date: "Yesterday",
-    },
-  ]);
+  const loadExpenses = async (currentUser) => {
+    if (!currentUser?.id) return;
 
-  const [adminRows, setAdminRows] = useState(defaultAdminRows);
+    try {
+      const response = await fetch(`${API_BASE_URL}/get_expenses.php?user_id=${currentUser.id}`);
+      const result = await response.json();
 
-  const navigate = (page) => {
-    setMenuVisible(false);
-    setScreen(page);
+      if (response.ok && result.success) {
+        setExpenses(result.expenses || []);
+      }
+    } catch (error) {
+      console.log("Load expenses error:", error);
+    }
   };
 
-  const addExpense = (expense) => {
+  const addExpense = async (expense) => {
+    if (!user?.id) {
+      Alert.alert("Login Required", "Please log in before saving expenses.");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/save_expense.php`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_id: user.id,
+          name: expense.name,
+          category: expense.category,
+          amount: expense.amount,
+          note: expense.note || "",
+          date: expense.date || new Date().toISOString().slice(0, 10),
+          image: expense.image || "",
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || result.success === false) {
+        Alert.alert("Save Failed", result.message || "Could not save your expense.");
+        return;
+      }
+
+      const savedExpense = {
+        ...result.expense,
+        id: result.expense.id || Date.now(),
+        amount: Number(result.expense.amount || 0),
+        date: result.expense.date || "Today",
+      };
+
+      setExpenses((previous) => [savedExpense, ...previous]);
+      return savedExpense;
+    } catch (error) {
+      Alert.alert("Connection Error", "Unable to save the expense. Check that the API server is running.");
+      return null;
+    }
+  };
+
+  const saveExpenseLocally = (expense) => {
     setExpenses((previous) => [
       {
         ...expense,
@@ -100,7 +133,14 @@ export default function App() {
     ]);
   };
 
-  const handleCreateAccount = (newUser) => {
+  const [adminRows, setAdminRows] = useState(defaultAdminRows);
+
+  const navigate = (page) => {
+    setMenuVisible(false);
+    setScreen(page);
+  };
+
+  const handleCreateAccount = async (newUser) => {
     const email = String(newUser.email || "").trim().toLowerCase();
     const password = String(newUser.password || "");
 
@@ -109,38 +149,77 @@ export default function App() {
       return;
     }
 
-    if (accounts.some((account) => account.email.toLowerCase() === email)) {
-      Alert.alert("Account Exists", "That email is already registered.");
-      return;
+    try {
+      setIsSubmitting(true);
+      const response = await fetch(`${API_BASE_URL}/register.php`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: String(newUser.name || "User").trim(),
+          email,
+          password,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || result.success === false) {
+        Alert.alert("Account Error", result.message || "Unable to create account.");
+        return;
+      }
+
+      setUser(result.user);
+      setIsSubmitting(false);
+      loadExpenses(result.user);
+      navigate("dashboard");
+    } catch (error) {
+      setIsSubmitting(false);
+      Alert.alert("Connection Error", "Unable to reach the database server. Check that XAMPP Apache/MySQL is running.");
     }
-
-    const nextUser = {
-      id: Date.now(),
-      name: String(newUser.name || "User").trim(),
-      email,
-      password,
-      role: "user",
-    };
-
-    setAccounts((previous) => [nextUser, ...previous]);
-    setUser(nextUser);
-    navigate("dashboard");
   };
 
-  const handleLogin = ({ email, password }) => {
+  const handleLogin = async ({ email, password }) => {
     const normalizedEmail = String(email || "").trim().toLowerCase();
     const passwordValue = String(password || "");
-    const matched = accounts.find(
-      (account) => account.email.toLowerCase() === normalizedEmail && account.password === passwordValue
-    );
 
-    if (!matched) {
+    if (!normalizedEmail || !passwordValue) {
       Alert.alert("Login Failed", "Email or password is incorrect.");
       return;
     }
 
-    setUser(matched);
-    navigate(matched.role === "admin" ? "admin" : "dashboard");
+    try {
+      setIsSubmitting(true);
+      const response = await fetch(`${API_BASE_URL}/login.php`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: normalizedEmail,
+          password: passwordValue,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || result.success === false) {
+        setIsSubmitting(false);
+        Alert.alert("Login Failed", result.message || "Email or password is incorrect.");
+        return;
+      }
+
+      setUser(result.user);
+      setIsSubmitting(false);
+      loadExpenses(result.user);
+      navigate(result.user.role === "admin" ? "admin" : "dashboard");
+    } catch (error) {
+      setIsSubmitting(false);
+      Alert.alert("Connection Error", "Unable to reach the database server. Check that XAMPP Apache/MySQL is running.");
+    }
   };
 
   const logout = () => {
@@ -208,7 +287,12 @@ export default function App() {
             user={user}
             expenses={expenses}
             onNavigate={navigate}
-            onAddExpense={addExpense}
+            onAddExpense={async (expense) => {
+              const saved = await addExpense(expense);
+              if (!saved) {
+                saveExpenseLocally(expense);
+              }
+            }}
           />
         )}
 
@@ -228,7 +312,12 @@ export default function App() {
             user={user}
             expenses={expenses}
             onNavigate={navigate}
-            onAddExpense={addExpense}
+            onAddExpense={async (expense) => {
+              const saved = await addExpense(expense);
+              if (!saved) {
+                saveExpenseLocally(expense);
+              }
+            }}
           />
         )}
 
@@ -283,7 +372,7 @@ function Header({
         <Text style={styles.logoGreen}>
           IQ
         </Text>
-      </Text>
+      `</Text>
 
       {onMenu ? (
         <TouchableOpacity
@@ -728,8 +817,9 @@ function CreateAccountScreen({
           />
 
           <PrimaryButton
-            title="Create Account"
+            title={isSubmitting ? "Creating..." : "Create Account"}
             onPress={createAccount}
+            disabled={isSubmitting}
           />
 
           <View style={styles.authFooter}>
@@ -855,8 +945,9 @@ function SignInScreen({
           />
 
           <PrimaryButton
-            title="Sign In"
+            title={isSubmitting ? "Signing In..." : "Sign In"}
             onPress={login}
+            disabled={isSubmitting}
           />
 
           <View style={styles.authFooter}>
@@ -3010,12 +3101,14 @@ function AddReceiptModal({
 function PrimaryButton({
   title,
   onPress,
+  disabled = false,
 }) {
   return (
     <TouchableOpacity
-      style={styles.primaryButton}
-      onPress={onPress}
-      activeOpacity={0.8}
+      style={[styles.primaryButton, disabled && styles.primaryButtonDisabled]}
+      onPress={disabled ? undefined : onPress}
+      activeOpacity={disabled ? 1 : 0.8}
+      disabled={disabled}
     >
 
       <Text style={styles.primaryButtonText}>
@@ -3029,12 +3122,14 @@ function PrimaryButton({
 function SecondaryButton({
   title,
   onPress,
+  disabled = false,
 }) {
   return (
     <TouchableOpacity
-      style={styles.secondaryButton}
-      onPress={onPress}
-      activeOpacity={0.8}
+      style={[styles.secondaryButton, disabled && styles.secondaryButtonDisabled]}
+      onPress={disabled ? undefined : onPress}
+      activeOpacity={disabled ? 1 : 0.8}
+      disabled={disabled}
     >
 
       <Text style={styles.secondaryButtonText}>
@@ -3173,6 +3268,10 @@ const styles = StyleSheet.create({
     marginBottom: 9,
   },
 
+  primaryButtonDisabled: {
+    opacity: 0.7,
+  },
+
   primaryButtonText: {
     color: "#07120F",
     fontSize: 13,
@@ -3187,6 +3286,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 15,
+  },
+
+  secondaryButtonDisabled: {
+    opacity: 0.7,
   },
 
   secondaryButtonText: {
