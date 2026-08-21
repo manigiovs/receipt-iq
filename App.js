@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   StatusBar,
   ScrollView,
   Alert,
@@ -18,6 +17,10 @@ import {
 
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import {
+  SafeAreaProvider,
+  SafeAreaView,
+} from "react-native-safe-area-context";
 
 /* =========================================================
    COLORS
@@ -38,10 +41,11 @@ const COLORS = {
   yellow: "#E9B94B",
 };
 
-const API_BASE_URL =
+const API_BASE_URL = (process.env.EXPO_PUBLIC_API_URL || (
   Platform.OS === "android"
     ? "http://10.0.2.2/receiptiq/api"
-    : "http://localhost/receiptiq/api";
+    : "http://localhost/receiptiq/api"
+)).replace(/\/$/, "");
 
 const defaultAdminRows = [
   { id: 1, name: "Alice Johnson", email: "alice@receiptiq.com", role: "Admin", status: "Active", department: "Operations" },
@@ -241,11 +245,12 @@ export default function App() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor={COLORS.black}
-      />
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar
+          barStyle="light-content"
+          backgroundColor={COLORS.black}
+        />
 
       <View style={styles.container}>
 
@@ -271,6 +276,7 @@ export default function App() {
             onBack={() => navigate("landing")}
             onSignIn={() => navigate("signin")}
             onCreate={handleCreateAccount}
+            isSubmitting={isSubmitting}
           />
         )}
 
@@ -279,6 +285,7 @@ export default function App() {
             onBack={() => navigate("landing")}
             onCreate={() => navigate("create")}
             onLogin={handleLogin}
+            isSubmitting={isSubmitting}
           />
         )}
 
@@ -335,8 +342,9 @@ export default function App() {
           onNavigate={navigate}
         />
 
-      </View>
-    </SafeAreaView>
+        </View>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
@@ -710,6 +718,7 @@ function CreateAccountScreen({
   onBack,
   onSignIn,
   onCreate,
+  isSubmitting = false,
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -852,6 +861,7 @@ function SignInScreen({
   onBack,
   onCreate,
   onLogin,
+  isSubmitting = false,
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

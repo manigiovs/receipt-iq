@@ -1,4 +1,7 @@
+
+
 import { Text, View, StyleSheet, Image } from 'react-native';
+
 
 export default function AssetExample() {
   return (
@@ -10,6 +13,7 @@ export default function AssetExample() {
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {

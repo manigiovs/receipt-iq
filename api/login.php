@@ -1,5 +1,8 @@
 <?php
+
+
 require_once __DIR__ . '/db_connect.php';
+
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -24,7 +27,7 @@ if ($email === '' || $password === '') {
 }
 
 $pdo = getDbConnection();
-$stmt = $pdo->prepare('SELECT id, fullname_user AS name, email, password, price FROM user WHERE email = :email LIMIT 1');
+$stmt = $pdo->prepare('SELECT id, fullname_user AS name, email, password, price, role FROM user WHERE email = :email LIMIT 1');
 $stmt->execute([':email' => $email]);
 $user = $stmt->fetch();
 
@@ -44,8 +47,11 @@ if (!$isValid) {
 }
 
 unset($user['password']);
-$user['role'] = strtolower((string)$user['email']) === 'admin@receiptiq.com' ? 'admin' : 'user';
-
+$storedRole = strtolower(trim((string)($user['role'] ?? '')));
+unset($user['role']);
+$user['role'] = $storedRole !== ''
+    ? $storedRole
+    : (strtolower((string)$user['email']) === 'admin@receiptiq.com' ? 'admin' : 'user');
 echo json_encode([
     'success' => true,
     'message' => 'Login successful.',

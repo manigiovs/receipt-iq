@@ -1,5 +1,8 @@
 <?php
+
+
 require_once __DIR__ . '/db_connect.php';
+
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     http_response_code(405);
@@ -7,13 +10,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     exit;
 }
 
+
 $userId = isset($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
+
 
 if ($userId <= 0) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'User ID is required.']);
     exit;
 }
+
 
 $pdo = getDbConnection();
 $stmt = $pdo->prepare(
@@ -24,6 +30,7 @@ $stmt = $pdo->prepare(
 );
 $stmt->execute([':user_id' => $userId]);
 $expenses = $stmt->fetchAll();
+
 
 foreach ($expenses as &$expense) {
     $expense['amount'] = (float)$expense['amount'];

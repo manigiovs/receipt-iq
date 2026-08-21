@@ -1,5 +1,8 @@
 <?php
+
+
 require_once __DIR__ . '/db_connect.php';
+
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -41,7 +44,8 @@ if ($checkStmt->fetch()) {
 }
 
 $passwordHash = password_hash($password, PASSWORD_DEFAULT);
-$insertStmt = $pdo->prepare('INSERT INTO user (fullname_user, password, email, price) VALUES (:name, :password, :email, 0.00)');
+
+$insertStmt = $pdo->prepare("INSERT INTO user (fullname_user, password, email, price, role) VALUES (:name, :password, :email, 0.00, 'user')");
 $insertStmt->execute([
     ':name' => $name,
     ':password' => $passwordHash,
