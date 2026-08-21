@@ -43,15 +43,15 @@ const COLORS = {
 
 const API_BASE_URL = (process.env.EXPO_PUBLIC_API_URL || (
   Platform.OS === "android"
-    ? "http://10.0.2.2/receiptiq/api"
-    : "http://localhost/receiptiq/api"
+    ? "http://10.0.2.2/receipt-iq/api"
+    : "http://localhost/receipt-iq/api"
 )).replace(/\/$/, "");
 
 const defaultAdminRows = [
-  { id: 1, name: "Alice Johnson", email: "alice@receiptiq.com", role: "Admin", status: "Active", department: "Operations" },
-  { id: 2, name: "Mark Lee", email: "mark@receiptiq.com", role: "Manager", status: "Active", department: "Finance" },
-  { id: 3, name: "Sara Gomez", email: "sara@receiptiq.com", role: "User", status: "Pending", department: "Support" },
-  { id: 4, name: "Daniel Cruz", email: "daniel@receiptiq.com", role: "User", status: "Inactive", department: "Sales" },
+  { id: 1, name: "Alice Johnson", email: "alice@gmail.com", role: "Admin", status: "Active", department: "Operations" },
+  { id: 2, name: "Mark Lee", email: "mark@gmail.com", role: "Manager", status: "Active", department: "Finance" },
+  { id: 3, name: "Sara Gomez", email: "sara@gmail.com", role: "User", status: "Pending", department: "Support" },
+  { id: 4, name: "Daniel Cruz", email: "daniel@gmail.com", role: "User", status: "Inactive", department: "Sales" },
 ];
 
 /* =========================================================
@@ -295,10 +295,7 @@ export default function App() {
             expenses={expenses}
             onNavigate={navigate}
             onAddExpense={async (expense) => {
-              const saved = await addExpense(expense);
-              if (!saved) {
-                saveExpenseLocally(expense);
-              }
+              await addExpense(expense);
             }}
           />
         )}
@@ -320,10 +317,7 @@ export default function App() {
             expenses={expenses}
             onNavigate={navigate}
             onAddExpense={async (expense) => {
-              const saved = await addExpense(expense);
-              if (!saved) {
-                saveExpenseLocally(expense);
-              }
+              await addExpense(expense);
             }}
           />
         )}
@@ -1238,6 +1232,10 @@ function SpendingChart({
       name: "Transportation",
       color: COLORS.red,
     },
+    {
+      name: "School",
+      color: COLORS.greenDark,
+    },
   ];
 
   const getTotal = (category) =>
@@ -1401,6 +1399,7 @@ function RecordsScreen({
             "Food & Dining",
             "Entertainment",
             "Transportation",
+            "School",
           ].map((filter, index) => (
 
             <TouchableOpacity
@@ -1505,6 +1504,7 @@ function TransactionRow({
       "game-controller-outline",
     Transportation:
       "car-outline",
+    School: "school-outline",
   };
 
   return (
@@ -2018,7 +2018,7 @@ function AdminDashboardScreen({
 
             {/* Name and Email */}
             <Text style={styles.profileName}>{user?.name || "Admin"}</Text>
-            <Text style={styles.profileEmail}>{user?.email || "admin@receiptiq.com"}</Text>
+            <Text style={styles.profileEmail}>{user?.email || "admin@gmail.com"}</Text>
 
             {/* Stats Row */}
             <View style={styles.statsRow}>
@@ -2745,6 +2745,7 @@ function AddExpenseModal({
               "Food & Dining",
               "Entertainment",
               "Transportation",
+              "School",
             ].map((item) => (
 
               <TouchableOpacity
@@ -2831,6 +2832,7 @@ function AddReceiptModal({
     { label: "Food", value: "Food & Dining", icon: "restaurant-outline" },
     { label: "Fun", value: "Entertainment", icon: "game-controller-outline" },
     { label: "Travel", value: "Transportation", icon: "car-outline" },
+    { label: "School", value: "School", icon: "school-outline" },
   ];
 
   const dayOptions = Array.from({ length: 31 }, (_, index) => index + 1);

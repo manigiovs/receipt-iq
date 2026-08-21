@@ -4,16 +4,27 @@
 
 The app uses the PHP REST API in `api/` for registration, login, and expense records.
 
-Start Apache and MySQL in XAMPP, then import `database/receipt_iq_db.sql` into MySQL.
-The default API URL is `http://localhost/receiptiq/api` on web and iOS, and
-`http://10.0.2.2/receiptiq/api` on the Android emulator.
+Copy this project into XAMPP's `htdocs` directory as `receipt-iq`, start Apache and
+MySQL, then import `database/receipt_iq_db.sql` into MySQL. The default API URL is
+`http://localhost/receipt-iq/api` on web and iOS, and
+`http://10.0.2.2/receipt-iq/api` on the Android emulator.
+
+If the database was imported before the `role` column was added, run this once:
+
+```sql
+ALTER TABLE user ADD COLUMN role varchar(20) NOT NULL DEFAULT 'user';
+UPDATE user SET role = 'admin' WHERE email = 'admin@gmail.com';
+```
 
 For a physical phone, set the computer's LAN address before starting Expo:
 
 ```powershell
-$env:EXPO_PUBLIC_API_URL = "http://YOUR_COMPUTER_IP/receiptiq/api"
+$env:EXPO_PUBLIC_API_URL = "http://YOUR_COMPUTER_IP/receipt-iq/api"
 npm start
 ```
+
+Use the computer's LAN IP, keep the phone and computer on the same network, and
+allow Apache through Windows Firewall when testing on a physical phone.
 
 Open the `App.js` file to start writing some code. You can preview the changes directly on your phone or tablet by scanning the **QR code** or use the iOS or Android emulators. When you're done, click **Save** and share the link!
 

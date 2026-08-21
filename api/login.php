@@ -26,6 +26,13 @@ if ($email === '' || $password === '') {
     exit;
 }
 
+$email = strtolower($email);
+if (!str_ends_with($email, '@gmail.com')) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Only Gmail addresses ending in @gmail.com are allowed.']);
+    exit;
+}
+
 $pdo = getDbConnection();
 $stmt = $pdo->prepare('SELECT id, fullname_user AS name, email, password, price, role FROM user WHERE email = :email LIMIT 1');
 $stmt->execute([':email' => $email]);
@@ -38,7 +45,7 @@ if (!$user) {
 }
 
 $storedPassword = (string)$user['password'];
-$isValid = $storedPassword === $password || password_verify($password, $storedPassword);
+$isValid = password_verify($password, $storedPassword);
 
 if (!$isValid) {
     http_response_code(401);
@@ -51,7 +58,7 @@ $storedRole = strtolower(trim((string)($user['role'] ?? '')));
 unset($user['role']);
 $user['role'] = $storedRole !== ''
     ? $storedRole
-    : (strtolower((string)$user['email']) === 'admin@receiptiq.com' ? 'admin' : 'user');
+    : (strtolower((string)$user['email']) === 'admin@gmail.com' ? 'admin' : 'user');
 echo json_encode([
     'success' => true,
     'message' => 'Login successful.',

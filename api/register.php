@@ -33,6 +33,12 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     exit;
 }
 
+if (!str_ends_with($email, '@gmail.com')) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Only Gmail addresses ending in @gmail.com are allowed.']);
+    exit;
+}
+
 $pdo = getDbConnection();
 $checkStmt = $pdo->prepare('SELECT id FROM user WHERE email = :email LIMIT 1');
 $checkStmt->execute([':email' => $email]);
