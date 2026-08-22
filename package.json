@@ -4,10 +4,10 @@
   "private": true,
   "main": "index.js",
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web"
+    "start": "node scripts/start.js",
+    "android": "node scripts/start.js",
+    "ios": "node scripts/start.js",
+    "web": "node scripts/start.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

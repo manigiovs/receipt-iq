@@ -16,15 +16,15 @@ ALTER TABLE user ADD COLUMN role varchar(20) NOT NULL DEFAULT 'user';
 UPDATE user SET role = 'admin' WHERE email = 'admin@gmail.com';
 ```
 
-For a physical phone, set the computer's LAN address before starting Expo:
+For a physical phone, the start script automatically detects the computer's LAN
+address and selects an available Expo port starting at 8082:
 
 ```powershell
-$env:EXPO_PUBLIC_API_URL = "http://YOUR_COMPUTER_IP/receipt-iq/api"
 npm start
 ```
 
-Use the computer's LAN IP, keep the phone and computer on the same network, and
-allow Apache through Windows Firewall when testing on a physical phone.
+Keep the phone and computer on the same network, and allow Apache through Windows
+Firewall when testing on a physical phone.
 
 Open the `App.js` file to start writing some code. You can preview the changes directly on your phone or tablet by scanning the **QR code** or use the iOS or Android emulators. When you're done, click **Save** and share the link!
 
