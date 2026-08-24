@@ -14,11 +14,12 @@ function getDbConnection()
         ]);
 
         return $pdo;
-    } catch (PDOException $exception) {
+        } catch (PDOException $exception) {
+        error_log('[ReceiptIQ] DB connection failed: ' . $exception->getMessage());
         http_response_code(500);
         echo json_encode([
             'success' => false,
-            'message' => 'Database connection failed: ' . $exception->getMessage(),
+            'message' => 'Database unavailable. Please try again later.',
         ]);
         exit;
     }

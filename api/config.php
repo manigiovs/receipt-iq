@@ -14,8 +14,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 const DB_HOST = '127.0.0.1';
 const DB_NAME = 'receipt_iq_db';
-const DB_USER = 'root';
-const DB_PASS = '';
+const DB_USER = 'receiptiq';
+const DB_PASS = 'ReceiptIQ2026';
 const DB_CHARSET = 'utf8mb4';
 error_reporting(E_ALL);
 ini_set('display_errors', '0');
