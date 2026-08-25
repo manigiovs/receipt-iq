@@ -68,7 +68,6 @@ if ($stmt->rowCount() === 0) {
 }
 
 
-// dito response
 echo json_encode([
     'success' => true,
     'message' => 'Expense updated.',
@@ -81,5 +80,3 @@ echo json_encode([
         'date'     => $date,
     ],
 ]);
-
-die(json_encode(['debug' => 'file is running']));
