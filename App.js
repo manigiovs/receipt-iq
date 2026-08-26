@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import {
   View,
@@ -42,9 +42,9 @@ const COLORS = {
 };
 
 const API_BASE_URL = (process.env.EXPO_PUBLIC_API_URL || (
-  Platform.OS === "android"
-    ? "http://10.0.2.2/receipt-iq/api"
-    : "http://localhost/receipt-iq/api"
+  Platform.OS === "web"
+    ? "http://localhost/receipt-iq/api"
+    : "http://192.168.1.9/receipt-iq/api"
 )).replace(/\/$/, "");
 
 const defaultAdminRows = [
@@ -63,6 +63,7 @@ export default function App() {
   const [menuVisible, setMenuVisible] = useState(false);
   const [user, setUser] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isProfileSaving, setIsProfileSaving] = useState(false);
   const [expenses, setExpenses] = useState([]);
 
   const loadExpenses = async (currentUser) => {
@@ -226,6 +227,41 @@ export default function App() {
     }
   };
 
+  const handleUpdateProfile = async ({ name, email }) => {
+    if (!user?.id) return null;
+
+    try {
+      setIsProfileSaving(true);
+      const response = await fetch(`${API_BASE_URL}/update_profile.php`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: user.id,
+          name,
+          email,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || result.success === false) {
+        Alert.alert("Profile Update Failed", result.message || "Unable to update your profile.");
+        return null;
+      }
+
+      setUser(result.user);
+      return result.user;
+    } catch (error) {
+      Alert.alert("Connection Error", "Unable to update your profile. Check that the API server is running.");
+      return null;
+    } finally {
+      setIsProfileSaving(false);
+    }
+  };
+
   const logout = () => {
     setUser(null);
     setMenuVisible(false);
@@ -305,6 +341,8 @@ export default function App() {
             user={user}
             rows={adminRows}
             onLogout={logout}
+            onUpdateProfile={handleUpdateProfile}
+            isProfileSaving={isProfileSaving}
             onAddRecord={addAdminRecord}
             onEditRecord={editAdminRecord}
             onDeleteRecord={deleteAdminRecord}
@@ -327,6 +365,8 @@ export default function App() {
             user={user}
             onNavigate={navigate}
             onLogout={logout}
+            onUpdateProfile={handleUpdateProfile}
+            isProfileSaving={isProfileSaving}
           />
         )}
 
@@ -1552,7 +1592,11 @@ function ProfileScreen({
   user,
   onNavigate,
   onLogout,
+  onUpdateProfile,
+  isProfileSaving,
 }) {
+  const [editProfileVisible, setEditProfileVisible] = useState(false);
+
   const handleNavigate = (page) => {
     // Prevent users from accessing admin pages
     if (user?.role === "user" && (page === "admin" || page === "adminDashboard")) {
@@ -1617,25 +1661,6 @@ function ProfileScreen({
             "username@email.com"}
         </Text>
 
-        <View style={styles.statsRow}>
-
-          <Stat
-            label="RECEIPTS"
-            value="142"
-          />
-
-          <Stat
-            label="TOTAL SPENT"
-            value="₱22,340"
-          />
-
-          <Stat
-            label="DAYS ACTIVE"
-            value="18"
-          />
-
-        </View>
-
         <Text style={styles.profileSection}>
           ACCOUNT
         </Text>
@@ -1645,6 +1670,7 @@ function ProfileScreen({
           <ProfileOption
             icon="create-outline"
             title="Edit Profile"
+            onPress={() => setEditProfileVisible(true)}
           />
 
           <ProfileOption
@@ -1699,6 +1725,17 @@ function ProfileScreen({
         onNavigate={handleNavigate}
       />
 
+      <EditProfileModal
+        visible={editProfileVisible}
+        user={user}
+        isSaving={isProfileSaving}
+        onClose={() => setEditProfileVisible(false)}
+        onSave={async (profile) => {
+          const updatedUser = await onUpdateProfile(profile);
+          if (updatedUser) setEditProfileVisible(false);
+        }}
+      />
+
     </View>
   );
 }
@@ -1733,16 +1770,17 @@ function Stat({
 function ProfileOption({
   icon,
   title,
+  onPress,
 }) {
   return (
     <TouchableOpacity
       style={styles.profileOption}
-      onPress={() =>
+      onPress={onPress || (() =>
         Alert.alert(
           title,
           `${title} settings will be available here.`
         )
-      }
+      )}
     >
 
       <View style={styles.profileOptionLeft}>
@@ -1769,6 +1807,86 @@ function ProfileOption({
   );
 }
 
+function EditProfileModal({
+  visible,
+  user,
+  isSaving,
+  onClose,
+  onSave,
+}) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+
+  useEffect(() => {
+    if (visible) {
+      setName(user?.name || "");
+      setEmail(user?.email || "");
+    }
+  }, [visible, user]);
+
+  const save = () => {
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim().toLowerCase();
+
+    if (!trimmedName || !trimmedEmail) {
+      Alert.alert("Missing Information", "Name and email are required.");
+      return;
+    }
+
+    onSave({ name: trimmedName, email: trimmedEmail });
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <KeyboardAvoidingView
+        style={styles.modalOverlay}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <View style={styles.modalCard}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Edit Profile</Text>
+            <TouchableOpacity onPress={onClose} disabled={isSaving}>
+              <Ionicons name="close" size={24} color={COLORS.white} />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.modalLabel}>Full Name</Text>
+          <TextInput
+            style={styles.modalInput}
+            value={name}
+            onChangeText={setName}
+            placeholder="Enter full name"
+            placeholderTextColor="#66676E"
+          />
+
+          <Text style={styles.modalLabel}>Email</Text>
+          <TextInput
+            style={styles.modalInput}
+            value={email}
+            onChangeText={setEmail}
+            placeholder="name@gmail.com"
+            placeholderTextColor="#66676E"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+
+          <PrimaryButton
+            title={isSaving ? "Saving..." : "Save Changes"}
+            onPress={save}
+            disabled={isSaving}
+          />
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
 /* =========================================================
    ADMIN DASHBOARD
 ========================================================= */
@@ -1777,11 +1895,14 @@ function AdminDashboardScreen({
   user,
   rows,
   onLogout,
+  onUpdateProfile,
+  isProfileSaving,
   onAddRecord,
   onEditRecord,
   onDeleteRecord,
 }) {
   const [modalVisible, setModalVisible] = useState(false);
+  const [editProfileVisible, setEditProfileVisible] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [currentTab, setCurrentTab] = useState("dashboard"); // dashboard, users, aiActivity
   const [form, setForm] = useState({
@@ -1859,9 +1980,6 @@ function AdminDashboardScreen({
                   </View>
                 </View>
               </View>
-              <TouchableOpacity onPress={onLogout} style={styles.adminHeaderLogout}>
-                <Ionicons name="log-out-outline" size={22} color={COLORS.red} />
-              </TouchableOpacity>
             </View>
 
             {/* Key Statistics */}
@@ -2020,19 +2138,12 @@ function AdminDashboardScreen({
             <Text style={styles.profileName}>{user?.name || "Admin"}</Text>
             <Text style={styles.profileEmail}>{user?.email || "admin@gmail.com"}</Text>
 
-            {/* Stats Row */}
-            <View style={styles.statsRow}>
-              <Stat label="RECEIPTS" value="142" />
-              <Stat label="TOTAL SPENT" value="₱2,340" />
-              <Stat label="DAYS ACTIVE" value="18" />
-            </View>
-
-            {/* Account Section */}
-            <Text style={styles.profileSection}>ACCOUNT</Text>
             <View style={styles.profileMenu}>
-              <ProfileOption icon="create-outline" title="Edit Profile" />
-              <ProfileOption icon="options-outline" title="Preferences" />
-              <ProfileOption icon="shield-checkmark-outline" title="Security" />
+              <ProfileOption
+                icon="create-outline"
+                title="Edit Profile"
+                onPress={() => setEditProfileVisible(true)}
+              />
             </View>
 
             {/* Support Section */}
@@ -2067,6 +2178,17 @@ function AdminDashboardScreen({
       <AdminBottomNavigation
         active={currentTab}
         onNavigate={setCurrentTab}
+      />
+
+      <EditProfileModal
+        visible={editProfileVisible}
+        user={user}
+        isSaving={isProfileSaving}
+        onClose={() => setEditProfileVisible(false)}
+        onSave={async (profile) => {
+          const updatedUser = await onUpdateProfile(profile);
+          if (updatedUser) setEditProfileVisible(false);
+        }}
       />
 
       <AdminUserModal
@@ -4545,16 +4667,16 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 25,
+    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
 
   adminGreeting: {
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: "800",
     color: COLORS.white,
-    marginBottom: 8,
+    marginBottom: 5,
   },
 
   adminBadgeRow: {
@@ -4586,18 +4708,19 @@ const styles = StyleSheet.create({
 
   adminStatRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     paddingHorizontal: 15,
-    paddingVertical: 20,
+    paddingVertical: 14,
   },
 
   adminStatItem: {
-    flex: 1,
+    width: "48%",
     backgroundColor: COLORS.card,
     borderRadius: 12,
-    paddingVertical: 16,
+    paddingVertical: 12,
     paddingHorizontal: 10,
-    marginHorizontal: 5,
+    marginBottom: 8,
     alignItems: "center",
   },
 
