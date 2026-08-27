@@ -39,6 +39,7 @@ $stmt = $pdo->prepare(
     'UPDATE expenses_tbl SET is_deleted = 1, deleted_at = NOW()
      WHERE id = :id AND user_id = :user_id'
 );
+$stmt->execute([':id' => $id, ':user_id' => $userId]);
 
 // 6. Respond
 echo json_encode([

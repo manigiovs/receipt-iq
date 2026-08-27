@@ -57,6 +57,8 @@ CREATE TABLE `expenses_tbl` (
   `receipt_date` date DEFAULT NULL,
   `description` text DEFAULT NULL,
   `image_path` varchar(255) DEFAULT NULL,
+  `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
+  `deleted_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -142,7 +144,7 @@ ALTER TABLE `expenses_tbl`
 
 --
 -- Indexes for table `recordstbl`
---
+--npx expo start --clearnpx expo start --clearnpx expo start --clearnpx expo start --clearexp://192.168.1.40:8087 bd e
 ALTER TABLE `recordstbl`
   ADD PRIMARY KEY (`id`);
 

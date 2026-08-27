@@ -5,7 +5,7 @@
 The app uses the PHP REST API in `api/` for registration, login, and expense records.
 
 Copy this project into XAMPP's `htdocs` directory as `receipt-iq`, start Apache and
-MySQL, then import `database/receipt_iq_db.sql` into MySQL. The default API URL is
+MySQL, then import `database/receipt_iq_db (2).sql` into MySQL. The default API URL is
 `http://localhost/receipt-iq/api` on web and iOS, and
 `http://10.0.2.2/receipt-iq/api` on the Android emulator.
 

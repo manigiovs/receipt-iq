@@ -44,7 +44,9 @@ const COLORS = {
 const API_BASE_URL = (process.env.EXPO_PUBLIC_API_URL || (
   Platform.OS === "web"
     ? "http://localhost/receipt-iq/api"
-    : "http://192.168.1.9/receipt-iq/api"
+    : Platform.OS === "android"
+      ? "http://10.0.2.2/receipt-iq/api"
+      : "http://192.168.1.40/receipt-iq/api"
 )).replace(/\/$/, "");
 
 const defaultAdminRows = [
@@ -414,7 +416,7 @@ function Header({
         <Text style={styles.logoGreen}>
           IQ
         </Text>
-      `</Text>
+      </Text>
 
       {onMenu ? (
         <TouchableOpacity
@@ -1021,6 +1023,8 @@ function Input({
   secureTextEntry,
   keyboardType,
 }) {
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
     <View style={styles.inputContainer}>
 
@@ -1028,16 +1032,32 @@ function Input({
         {label}
       </Text>
 
-      <TextInput
-        style={styles.input}
-        value={value}
-        onChangeText={onChangeText}
-        secureTextEntry={secureTextEntry}
-        keyboardType={keyboardType}
-        autoCapitalize="none"
-        autoCorrect={false}
-        placeholderTextColor="#55565D"
-      />
+      <View style={styles.inputRow}>
+        <TextInput
+          style={styles.input}
+          value={value}
+          onChangeText={onChangeText}
+          secureTextEntry={secureTextEntry && !showPassword}
+          keyboardType={keyboardType}
+          autoCapitalize="none"
+          autoCorrect={false}
+          placeholderTextColor="#55565D"
+        />
+
+        {secureTextEntry && (
+          <TouchableOpacity
+            accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+            onPress={() => setShowPassword((visible) => !visible)}
+            style={styles.passwordToggle}
+          >
+            <Ionicons
+              name={showPassword ? "eye-off-outline" : "eye-outline"}
+              size={19}
+              color={COLORS.gray}
+            />
+          </TouchableOpacity>
+        )}
+      </View>
 
     </View>
   );
@@ -3638,11 +3658,25 @@ const styles = StyleSheet.create({
 
   input: {
     height: 40,
-    borderBottomWidth: 1,
-    borderBottomColor: "#777880",
+    flex: 1,
     color: COLORS.white,
     fontSize: 13,
     paddingVertical: 0,
+  },
+
+  inputRow: {
+    height: 40,
+    flexDirection: "row",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: "#777880",
+  },
+
+  passwordToggle: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   authFooter: {
