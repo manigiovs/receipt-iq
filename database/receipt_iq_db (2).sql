@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Aug 23, 2026 at 03:34 AM
+-- Generation Time: Aug 27, 2026 at 10:40 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -57,17 +57,18 @@ CREATE TABLE `expenses_tbl` (
   `receipt_date` date DEFAULT NULL,
   `description` text DEFAULT NULL,
   `image_path` varchar(255) DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `is_deleted` tinyint(1) NOT NULL DEFAULT 0,
-  `deleted_at` datetime DEFAULT NULL
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `expenses_tbl`
 --
 
-INSERT INTO `expenses_tbl` (`id`, `user_id`, `merchant_name`, `category`, `amount`, `receipt_date`, `description`, `image_path`, `created_at`, `is_deleted`, `deleted_at`) VALUES
-(1, 2, 'Jollibee', 'Food & Dining', 750.00, '2026-09-15', '', '', '2026-08-22 03:46:19', 0, NULL);
+INSERT INTO `expenses_tbl` (`id`, `user_id`, `merchant_name`, `category`, `amount`, `receipt_date`, `description`, `image_path`, `created_at`) VALUES
+(1, 3, 'Jollibee', 'Shopping', 240.00, '0000-00-00', 'hello', '', '2026-08-21 17:17:15'),
+(2, 3, 'School', 'Shopping', 5000.00, '2026-08-21', '', 'file:///data/user/0/host.exp.exponent/cache/ImagePicker/09a7f13b-b294-4cc3-8349-81408a507aae.jpeg', '2026-08-21 17:24:19'),
+(3, 3, 'Tuition', 'Shopping', 2000.00, '2026-08-21', '', 'file:///data/user/0/host.exp.exponent/cache/ImagePicker/f6996364-dd44-4630-9143-0f47d0ab3bd3.jpeg', '2026-08-21 17:30:20'),
+(4, 2, 'Robux', 'School', 500.00, '0000-00-00', 'Bumili ako robux', '', '2026-08-27 08:31:30');
 
 -- --------------------------------------------------------
 
@@ -78,8 +79,7 @@ INSERT INTO `expenses_tbl` (`id`, `user_id`, `merchant_name`, `category`, `amoun
 CREATE TABLE `recordstbl` (
   `id` int(11) NOT NULL,
   `fullname_user` varchar(255) NOT NULL,
-  `password` varchar(255) NOT NULL,
-  `email` varchar(150) NOT NULL,
+  `receiptrecord` mediumblob NOT NULL,
   `price` decimal(10,2) NOT NULL,
   `category` varchar(255) NOT NULL,
   `date` date NOT NULL
@@ -120,7 +120,9 @@ CREATE TABLE `user` (
 
 INSERT INTO `user` (`id`, `fullname_user`, `password`, `email`, `price`, `role`) VALUES
 (1, 'Admin User', '$2y$10$EpvObQweRPwKwL7nxIgZS./DZsMNHXkl5sUX7Ue/01Xq6tfWmqAd2', 'admin@gmail.com', 0.00, 'admin'),
-(2, 'Demo User', '$2y$10$EpvObQweRPwKwL7nxIgZS./DZsMNHXkl5sUX7Ue/01Xq6tfWmqAd2', 'user@gmail.com', 0.00, 'user');
+(2, 'Demo User', '$2y$10$EpvObQweRPwKwL7nxIgZS./DZsMNHXkl5sUX7Ue/01Xq6tfWmqAd2', 'user@gmail.com', 0.00, 'user'),
+(3, 'allen', '$2y$10$TLHHom7x6wwdLSbp5KjnHOJSYijPHJxIBbeutlwLQPh9Atw7xgXc.', 'allen@gmail.com', 0.00, 'user'),
+(4, 'alexis', '$2y$10$SD137XpFMtiCeS5VZ6Mtfu2LgNDb9dDHf1alaX.J2TI2d795ci7l2', 'devera@gmail.com', 0.00, 'user');
 
 --
 -- Indexes for dumped tables
@@ -136,19 +138,12 @@ ALTER TABLE `ai_tbl`
 -- Indexes for table `expenses_tbl`
 --
 ALTER TABLE `expenses_tbl`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_user_date` (`user_id`,`receipt_date`);
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `recordstbl`
 --
 ALTER TABLE `recordstbl`
-  ADD PRIMARY KEY (`id`);
-
---
--- Indexes for table `review_tbl`
---
-ALTER TABLE `review_tbl`
   ADD PRIMARY KEY (`id`);
 
 --
@@ -171,7 +166,7 @@ ALTER TABLE `ai_tbl`
 -- AUTO_INCREMENT for table `expenses_tbl`
 --
 ALTER TABLE `expenses_tbl`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `recordstbl`
@@ -180,16 +175,10 @@ ALTER TABLE `recordstbl`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `review_tbl`
---
-ALTER TABLE `review_tbl`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
 -- AUTO_INCREMENT for table `user`
 --
 ALTER TABLE `user`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

@@ -794,11 +794,8 @@ function CreateAccountScreen({
   return (
     <KeyboardAvoidingView
       style={styles.page}
-      behavior={
-        Platform.OS === "ios"
-          ? "padding"
-          : undefined
-      }
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 24}
     >
 
       <ScrollView
@@ -929,11 +926,8 @@ function SignInScreen({
   return (
     <KeyboardAvoidingView
       style={styles.page}
-      behavior={
-        Platform.OS === "ios"
-          ? "padding"
-          : undefined
-      }
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 24}
     >
 
       <ScrollView
@@ -1396,7 +1390,11 @@ function RecordsScreen({
     );
 
   return (
-    <View style={styles.dashboardPage}>
+    <KeyboardAvoidingView
+      style={styles.dashboardPage}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 24}
+    >
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -1525,7 +1523,7 @@ function RecordsScreen({
         }}
       />
 
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -1845,7 +1843,8 @@ function EditProfileModal({
     >
       <KeyboardAvoidingView
         style={styles.modalOverlay}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 24}
       >
         <View style={styles.modalCard}>
           <View style={styles.modalHeader}>
@@ -2247,7 +2246,11 @@ function AdminUserModal({ visible, onClose, onSave, onChange, form, title }) {
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <KeyboardAvoidingView
+        style={styles.modalOverlay}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 24}
+      >
         <View style={styles.modalCard}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{title}</Text>
@@ -2762,11 +2765,8 @@ function AddExpenseModal({
 
       <KeyboardAvoidingView
         style={styles.modalOverlay}
-        behavior={
-          Platform.OS === "ios"
-            ? "padding"
-            : undefined
-        }
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 24}
       >
 
         <View style={styles.modalCard}>
@@ -3025,7 +3025,8 @@ function AddReceiptModal({
     >
       <KeyboardAvoidingView
         style={styles.addModalOverlay}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 24}
       >
         <View style={styles.addModalCard}>
           <View style={styles.addModalHeader}>
@@ -3114,7 +3115,11 @@ function AddReceiptModal({
         animationType="slide"
         onRequestClose={() => setShowDateSheet(false)}
       >
-        <View style={styles.dateSheetOverlay}>
+        <KeyboardAvoidingView
+          style={styles.dateSheetOverlay}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 24}
+        >
           <View style={styles.dateSheetCard}>
             <View style={styles.dateSheetHandle} />
 
@@ -3222,7 +3227,7 @@ function AddReceiptModal({
               <Text style={styles.dateSheetDoneText}>Done</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </Modal>
   );
