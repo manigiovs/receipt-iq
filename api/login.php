@@ -34,7 +34,7 @@ if (!str_ends_with($email, '@gmail.com')) {
 }
 
 $pdo = getDbConnection();
-$stmt = $pdo->prepare('SELECT id, fullname_user AS name, email, password, price, role FROM user WHERE email = :email LIMIT 1');
+$stmt = $pdo->prepare('SELECT id, fullname_user AS name, email, password, price, role, profile_pic FROM user WHERE email = :email LIMIT 1');
 $stmt->execute([':email' => $email]);
 $user = $stmt->fetch();
 
@@ -54,6 +54,9 @@ if (!$isValid) {
 }
 
 unset($user['password']);
+$user['profile_pic'] = !empty($user['profile_pic'])
+    ? 'data:image/jpeg;base64,' . base64_encode($user['profile_pic'])
+    : null;
 $storedRole = strtolower(trim((string)($user['role'] ?? '')));
 unset($user['role']);
 $user['role'] = $storedRole !== ''

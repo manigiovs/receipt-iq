@@ -26,7 +26,7 @@ $stmt = $pdo->prepare(
     'SELECT id, merchant_name AS name, category, amount, receipt_date AS date,
     description AS note, image_path AS image
     FROM expenses_tbl
-    WHERE user_id = :user_id AND is_deleted = 0
+    WHERE user_id = :user_id
     ORDER BY created_at DESC'
 );
 $stmt->execute([':user_id' => $userId]);

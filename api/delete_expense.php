@@ -34,9 +34,9 @@ if (!$check->fetch()) {
     exit;
 }
 
-// 5b. Delete
+// 5b. Delete after verifying ownership
 $stmt = $pdo->prepare(
-    'UPDATE expenses_tbl SET is_deleted = 1, deleted_at = NOW()
+    'DELETE FROM expenses_tbl
      WHERE id = :id AND user_id = :user_id'
 );
 $stmt->execute([':id' => $id, ':user_id' => $userId]);

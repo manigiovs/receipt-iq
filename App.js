@@ -44,10 +44,9 @@ const COLORS = {
 const API_BASE_URL = (process.env.EXPO_PUBLIC_API_URL || (
   Platform.OS === "web"
     ? "http://localhost/receipt-iq/api"
-    : Platform.OS === "android"
-      ? "http://10.0.2.2/receipt-iq/api"
-      : "http://192.168.1.40/receipt-iq/api"
+    : "http://192.168.1.9/receipt-iq/api"
 )).replace(/\/$/, "");
+const MAX_PROFILE_PICTURE_BYTES = 5 * 1024 * 1024;
 
 const defaultAdminRows = [
   { id: 1, name: "Alice Johnson", email: "alice@gmail.com", role: "Admin", status: "Active", department: "Operations" },
@@ -229,22 +228,30 @@ export default function App() {
     }
   };
 
-  const handleUpdateProfile = async ({ name, email }) => {
+  const handleUpdateProfile = async ({ name, email, profilePicture }) => {
     if (!user?.id) return null;
 
     try {
       setIsProfileSaving(true);
+      const body = new FormData();
+      body.append("id", String(user.id));
+      body.append("name", name);
+      body.append("email", email);
+
+      if (profilePicture) {
+        body.append("profile_pic", {
+          uri: profilePicture,
+          name: "profile-picture.jpg",
+          type: "image/jpeg",
+        });
+      }
+
       const response = await fetch(`${API_BASE_URL}/update_profile.php`, {
         method: "POST",
         headers: {
           Accept: "application/json",
-          "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          id: user.id,
-          name,
-          email,
-        }),
+        body,
       });
 
       const result = await response.json();
@@ -343,8 +350,6 @@ export default function App() {
             user={user}
             rows={adminRows}
             onLogout={logout}
-            onUpdateProfile={handleUpdateProfile}
-            isProfileSaving={isProfileSaving}
             onAddRecord={addAdminRecord}
             onEditRecord={editAdminRecord}
             onDeleteRecord={deleteAdminRecord}
@@ -1661,13 +1666,11 @@ function ProfileScreen({
         </Text>
 
         <View style={styles.profileAvatar}>
-
-          <Ionicons
-            name="person-outline"
-            size={50}
-            color={COLORS.green}
-          />
-
+          {user?.profile_pic ? (
+            <Image source={{ uri: user.profile_pic }} style={styles.profileAvatarImage} />
+          ) : (
+            <Ionicons name="person-outline" size={50} color={COLORS.green} />
+          )}
         </View>
 
         <Text style={styles.profileName}>
@@ -1834,13 +1837,66 @@ function EditProfileModal({
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [profilePicture, setProfilePicture] = useState(null);
 
   useEffect(() => {
     if (visible) {
       setName(user?.name || "");
       setEmail(user?.email || "");
+      setProfilePicture(null);
     }
   }, [visible, user]);
+
+  const chooseProfilePicture = async (source) => {
+    const permission = source === "camera"
+      ? await ImagePicker.requestCameraPermissionsAsync()
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert("Permission Required", `Please allow ${source === "camera" ? "camera" : "photo library"} access.`);
+      return;
+    }
+
+    const result = source === "camera"
+      ? await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8,
+        })
+      : await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8,
+        });
+
+    const asset = result.assets?.[0];
+    if (!result.canceled && asset?.uri) {
+      const assetType = String(asset.mimeType || asset.type || "").toLowerCase();
+      const isImage = assetType === "image" || assetType.startsWith("image/") || assetType === "";
+
+      if (!isImage) {
+        Alert.alert("Invalid File", "Please select an image file only.");
+        return;
+      }
+
+      if (asset.fileSize && asset.fileSize > MAX_PROFILE_PICTURE_BYTES) {
+        Alert.alert("File Too Large", "Profile pictures must be 5 MB or smaller.");
+        return;
+      }
+
+      setProfilePicture(asset.uri);
+    }
+  };
+
+  const showProfilePictureOptions = () => {
+    Alert.alert("Profile Picture", "Choose a photo source", [
+      { text: "Take the photo", onPress: () => chooseProfilePicture("camera") },
+      { text: "Upload the photo", onPress: () => chooseProfilePicture("library") },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
 
   const save = () => {
     const trimmedName = name.trim();
@@ -1851,7 +1907,7 @@ function EditProfileModal({
       return;
     }
 
-    onSave({ name: trimmedName, email: trimmedEmail });
+    onSave({ name: trimmedName, email: trimmedEmail, profilePicture });
   };
 
   return (
@@ -1873,6 +1929,21 @@ function EditProfileModal({
               <Ionicons name="close" size={24} color={COLORS.white} />
             </TouchableOpacity>
           </View>
+
+          <TouchableOpacity style={styles.profilePicturePicker} onPress={showProfilePictureOptions} disabled={isSaving}>
+            <View style={styles.profilePicturePreview}>
+              {profilePicture || user?.profile_pic ? (
+                <Image source={{ uri: profilePicture || user.profile_pic }} style={styles.profilePictureImage} />
+              ) : (
+                <Ionicons name="person-outline" size={34} color={COLORS.green} />
+              )}
+            </View>
+            <View>
+              <Text style={styles.profilePictureTitle}>Profile Picture</Text>
+              <Text style={styles.profilePictureHint}>JPG, PNG, or WEBP up to 5 MB</Text>
+            </View>
+            <Ionicons name="camera-outline" size={22} color={COLORS.green} />
+          </TouchableOpacity>
 
           <Text style={styles.modalLabel}>Full Name</Text>
           <TextInput
@@ -1914,14 +1985,11 @@ function AdminDashboardScreen({
   user,
   rows,
   onLogout,
-  onUpdateProfile,
-  isProfileSaving,
   onAddRecord,
   onEditRecord,
   onDeleteRecord,
 }) {
   const [modalVisible, setModalVisible] = useState(false);
-  const [editProfileVisible, setEditProfileVisible] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [currentTab, setCurrentTab] = useState("dashboard"); // dashboard, users, aiActivity
   const [form, setForm] = useState({
@@ -2150,20 +2218,16 @@ function AdminDashboardScreen({
 
             {/* Avatar */}
             <View style={styles.profileAvatar}>
-              <Ionicons name="person-outline" size={50} color={COLORS.green} />
+              {user?.profile_pic ? (
+                <Image source={{ uri: user.profile_pic }} style={styles.profileAvatarImage} />
+              ) : (
+                <Ionicons name="person-outline" size={50} color={COLORS.green} />
+              )}
             </View>
 
             {/* Name and Email */}
             <Text style={styles.profileName}>{user?.name || "Admin"}</Text>
             <Text style={styles.profileEmail}>{user?.email || "admin@gmail.com"}</Text>
-
-            <View style={styles.profileMenu}>
-              <ProfileOption
-                icon="create-outline"
-                title="Edit Profile"
-                onPress={() => setEditProfileVisible(true)}
-              />
-            </View>
 
             {/* Support Section */}
             <Text style={styles.profileSection}>SUPPORT</Text>
@@ -2197,17 +2261,6 @@ function AdminDashboardScreen({
       <AdminBottomNavigation
         active={currentTab}
         onNavigate={setCurrentTab}
-      />
-
-      <EditProfileModal
-        visible={editProfileVisible}
-        user={user}
-        isSaving={isProfileSaving}
-        onClose={() => setEditProfileVisible(false)}
-        onSave={async (profile) => {
-          const updatedUser = await onUpdateProfile(profile);
-          if (updatedUser) setEditProfileVisible(false);
-        }}
       />
 
       <AdminUserModal
@@ -4012,6 +4065,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
+  profileAvatarImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 38,
+  },
+
   profileName: {
     color: COLORS.white,
     textAlign: "center",
@@ -4200,6 +4259,44 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingTop: 22,
     paddingBottom: 30,
+  },
+
+  profilePicturePicker: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#22242C",
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 18,
+  },
+
+  profilePicturePreview: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: COLORS.green,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    marginRight: 12,
+  },
+
+  profilePictureImage: {
+    width: "100%",
+    height: "100%",
+  },
+
+  profilePictureTitle: {
+    color: COLORS.white,
+    fontSize: 10,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+
+  profilePictureHint: {
+    color: COLORS.gray,
+    fontSize: 8,
   },
 
   addModalOverlay: {

@@ -35,7 +35,7 @@ function findAvailablePort(startPort) {
 
 async function start() {
   const lanAddress = getLanAddress();
-  const port = 8082;
+  const port = await findAvailablePort(8082);
   const lifecycle = process.env.npm_lifecycle_event;
   const platformFlag = ["android", "ios", "web"].includes(lifecycle)
     ? `--${lifecycle}`
