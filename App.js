@@ -1105,7 +1105,6 @@ function DashboardScreen({
       sum + Number(expense.amount),
     0
   );
-
   return (
     <View style={styles.dashboardPage}>
 
@@ -1129,6 +1128,7 @@ function DashboardScreen({
             </Text>
 
           </View>
+
         </View>
 
         <View style={styles.balanceCard}>
@@ -1175,9 +1175,7 @@ function DashboardScreen({
           action="This Month"
         />
 
-        <SpendingChart
-          expenses={expenses}
-        />
+        <SpendingChart expenses={expenses} />
 
         <View style={styles.recentHeader}>
 
@@ -1300,7 +1298,7 @@ function SpendingChart({
       color: COLORS.red,
     },
     {
-      name: "School",
+      name: "Bills",
       color: COLORS.greenDark,
     },
   ];
@@ -1881,7 +1879,7 @@ function PreferencesScreen({
       <View style={styles.preferencesHero}>
         <Header showBack onBack={onBack} />
         <View style={styles.preferencesHeroContent}>
-          <Text style={styles.preferencesHeroTitle}>
+            <Text style={styles.preferencesHeroTitle}>
             Let&apos;s Tailor it{`\n`}To You
           </Text>
           <Tag text="PERSONALIZE YOUR EXPERIENCE" />
