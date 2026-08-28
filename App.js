@@ -173,6 +173,7 @@ export default function App() {
       const result = await response.json();
 
       if (!response.ok || result.success === false) {
+        setIsSubmitting(false);
         Alert.alert("Account Error", result.message || "Unable to create account.");
         return;
       }
@@ -374,6 +375,13 @@ export default function App() {
             onLogout={logout}
             onUpdateProfile={handleUpdateProfile}
             isProfileSaving={isProfileSaving}
+          />
+        )}
+
+        {screen === "preferences" && (
+          <PreferencesScreen
+            onBack={() => navigate("profile")}
+            onComplete={() => navigate("profile")}
           />
         )}
 
@@ -1697,6 +1705,7 @@ function ProfileScreen({
           <ProfileOption
             icon="options-outline"
             title="Preferences"
+            onPress={() => onNavigate("preferences")}
           />
 
           <ProfileOption
@@ -1825,6 +1834,120 @@ function ProfileOption({
       />
 
     </TouchableOpacity>
+  );
+}
+
+function PreferencesScreen({
+  onBack,
+  onComplete,
+}) {
+  const [currency, setCurrency] = useState("PHP Philippine Peso");
+  const [budget, setBudget] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState([
+    "Food & Dining",
+    "Shopping",
+    "Bills",
+    "Transportation",
+    "Entertainment",
+  ]);
+
+  const categories = [
+    { name: "Food & Dining", subtitle: "Groceries, dining out", icon: "restaurant-outline", color: COLORS.blue },
+    { name: "Shopping", subtitle: "Retail, online orders", icon: "cart-outline", color: COLORS.greenDark },
+    { name: "Bills", subtitle: "Utilities, subscription", icon: "receipt-outline", color: COLORS.yellow },
+    { name: "Transportation", subtitle: "Rides, fuel, transit", icon: "car-outline", color: COLORS.red },
+    { name: "Entertainment", subtitle: "Games, movies, fun", icon: "game-controller-outline", color: COLORS.blue },
+  ];
+
+  const toggleCategory = (category) => {
+    setSelectedCategories((current) => (
+      current.includes(category)
+        ? current.filter((item) => item !== category)
+        : [...current, category]
+    ));
+  };
+
+  const selectCurrency = () => {
+    Alert.alert("Select currency", "Choose your preferred currency.", [
+      { text: "PHP Philippine Peso", onPress: () => setCurrency("PHP Philippine Peso") },
+      { text: "USD US Dollar", onPress: () => setCurrency("USD US Dollar") },
+      { text: "EUR Euro", onPress: () => setCurrency("EUR Euro") },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
+  return (
+    <View style={styles.preferencesPage}>
+      <View style={styles.preferencesHero}>
+        <Header showBack onBack={onBack} />
+        <View style={styles.preferencesHeroContent}>
+          <Text style={styles.preferencesHeroTitle}>
+            Let&apos;s Tailor it{`\n`}To You
+          </Text>
+          <Tag text="PERSONALIZE YOUR EXPERIENCE" />
+        </View>
+      </View>
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.preferencesContent}
+      >
+        <Text style={styles.preferencesTitle}>SET YOUR PREFERENCES</Text>
+        <Text style={styles.preferencesSubtitle}>
+          Set these up so ReceiptIQ works the way you do.
+        </Text>
+
+        <Text style={styles.preferencesLabel}>CURRENCY</Text>
+        <TouchableOpacity
+          style={styles.preferencesSelect}
+          onPress={selectCurrency}
+        >
+          <Text style={styles.preferencesSelectText}>{currency}</Text>
+          <Ionicons name="chevron-down" size={18} color={COLORS.gray} />
+        </TouchableOpacity>
+
+        <Text style={styles.preferencesLabel}>MONTHLY BUDGET</Text>
+        <TextInput
+          style={styles.preferencesInput}
+          value={budget}
+          onChangeText={setBudget}
+          placeholder="e.g. ₱15,000"
+          placeholderTextColor="#C8C8CC"
+          keyboardType="decimal-pad"
+        />
+
+        <Text style={styles.preferencesLabel}>CATEGORIES TO TRACK</Text>
+        <View style={styles.preferencesCategoryGrid}>
+          {categories.map((category) => {
+            const selected = selectedCategories.includes(category.name);
+            return (
+              <TouchableOpacity
+                key={category.name}
+                style={[
+                  styles.preferencesCategory,
+                  category.name === "Entertainment" && styles.preferencesCategoryCentered,
+                  selected && styles.preferencesCategorySelected,
+                ]}
+                onPress={() => toggleCategory(category.name)}
+              >
+                <View style={[styles.preferencesCategoryIcon, { backgroundColor: category.color }]}>
+                  <Ionicons name={category.icon} size={15} color={COLORS.white} />
+                </View>
+                <View style={styles.preferencesCategoryText}>
+                  <Text style={styles.preferencesCategoryName}>{category.name}</Text>
+                  <Text style={styles.preferencesCategorySubtitle}>{category.subtitle}</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <PrimaryButton title="Save & Continue" onPress={onComplete} />
+        <TouchableOpacity style={styles.preferencesSkip} onPress={onComplete}>
+          <Text style={styles.preferencesSkipText}>Skip for now</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -3027,7 +3150,7 @@ function AddReceiptModal({
     { label: "Food", value: "Food & Dining", icon: "restaurant-outline" },
     { label: "Fun", value: "Entertainment", icon: "game-controller-outline" },
     { label: "Travel", value: "Transportation", icon: "car-outline" },
-    { label: "School", value: "School", icon: "school-outline" },
+    { label: "Bills", value: "Bills", icon: "receipt-outline" },
   ];
 
   const dayOptions = Array.from({ length: 31 }, (_, index) => index + 1);
@@ -4042,6 +4165,145 @@ const styles = StyleSheet.create({
   },
 
   /* PROFILE */
+
+  preferencesPage: {
+    flex: 1,
+    backgroundColor: COLORS.card,
+  },
+
+  preferencesHero: {
+    minHeight: 270,
+    backgroundColor: COLORS.black,
+  },
+
+  preferencesHeroContent: {
+    paddingHorizontal: 50,
+    paddingTop: 25,
+  },
+
+  preferencesHeroTitle: {
+    color: COLORS.white,
+    fontSize: 20,
+    lineHeight: 25,
+    fontWeight: "700",
+    marginBottom: 18,
+  },
+
+  preferencesContent: {
+    paddingHorizontal: 28,
+    paddingTop: 35,
+    paddingBottom: 28,
+  },
+
+  preferencesTitle: {
+    color: COLORS.white,
+    fontFamily: Platform.OS === "ios" ? "Georgia" : "serif",
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 6,
+  },
+
+  preferencesSubtitle: {
+    color: "#777880",
+    fontSize: 9,
+    marginBottom: 23,
+  },
+
+  preferencesLabel: {
+    color: "#777880",
+    fontSize: 8,
+    marginBottom: 7,
+    marginTop: 8,
+  },
+
+  preferencesSelect: {
+    height: 30,
+    borderWidth: 1,
+    borderColor: "#2C2D35",
+    borderRadius: 7,
+    paddingHorizontal: 11,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 11,
+  },
+
+  preferencesSelectText: {
+    color: COLORS.white,
+    fontSize: 10,
+  },
+
+  preferencesInput: {
+    height: 30,
+    borderRadius: 7,
+    backgroundColor: "#25262E",
+    color: COLORS.white,
+    paddingHorizontal: 11,
+    fontSize: 10,
+    marginBottom: 13,
+  },
+
+  preferencesCategoryGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginBottom: 35,
+  },
+
+  preferencesCategory: {
+    width: "48%",
+    minHeight: 66,
+    borderWidth: 1,
+    borderColor: "#2C2D35",
+    borderRadius: 10,
+    padding: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+
+  preferencesCategorySelected: {
+    borderColor: "#3A3B43",
+  },
+
+  preferencesCategoryCentered: {
+    alignSelf: "center",
+  },
+
+  preferencesCategoryIcon: {
+    width: 19,
+    height: 19,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+  },
+
+  preferencesCategoryText: {
+    flex: 1,
+  },
+
+  preferencesCategoryName: {
+    color: COLORS.white,
+    fontSize: 9,
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+
+  preferencesCategorySubtitle: {
+    color: "#777880",
+    fontSize: 6,
+  },
+
+  preferencesSkip: {
+    alignItems: "center",
+    paddingVertical: 4,
+  },
+
+  preferencesSkipText: {
+    color: "#777880",
+    fontSize: 12,
+  },
 
   profileTitle: {
     color: COLORS.white,
