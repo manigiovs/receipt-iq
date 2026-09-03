@@ -1,4 +1,51 @@
-# Receipt IQ
+# MediSked
+
+MediSked is a medication management and adherence support system for patients, caregivers, and administrators. It will support medication records, schedules, dose tracking, refill monitoring, caregiver sharing, reports, and assistive prescription-label extraction.
+
+## Architecture
+
+The project uses one shared Expo/React Native frontend for Android and Expo Web. Both clients communicate with a PHP REST API, which owns authentication, authorization, validation, business logic, notifications, audit logging, and future AI integration. The API is the only application layer allowed to access MySQL/MariaDB.
+
+```text
+Expo Android / Expo Web
+		|
+		v
+	PHP REST API
+		|
+		v
+	 MySQL/MariaDB
+```
+
+AI will be called by the backend only. Extracted medication information must be reviewed by the user before it becomes an active record.
+
+## Repository Organization
+
+The `frontend/`, `backend/`, `database/`, `docs/`, and `postman/` directories are the new migration foundation. The current ReceiptIQ application remains at the repository root while functionality is extracted incrementally.
+
+- `frontend/` will contain shared screens, components, services, theme, and types.
+- `backend/` will contain versioned API routes, middleware, configuration, and private uploads.
+- `database/schema.sql` is the standalone MediSked target schema.
+- `database/receipt_iq_db (3).sql` remains the untouched ReceiptIQ reference schema.
+- `docs/` and `postman/` are reserved for API, architecture, security, and testing artifacts.
+
+## Current Migration Status
+
+Phase 1 is complete: target directories, a secrets-free environment template, the MediSked target schema, and this foundation documentation have been added. No ReceiptIQ application code, API endpoint, existing database, or dependency has been changed. Medication workflows, authentication migration, AI integration, and frontend extraction are intentionally deferred.
+
+## Development Setup
+
+The existing ReceiptIQ reference app can still be run with:
+
+```powershell
+npm install
+npm start
+```
+
+For the current reference API, use the existing XAMPP/Apache and MySQL setup described below. Do not import `database/schema.sql` into the ReceiptIQ database; it targets the separate `medisked_db` database and is not connected to the current app yet.
+
+Future MediSked development should copy `.env.example` to a local environment file, use a non-privileged database account, and serve the API over HTTPS outside local development. Never commit real passwords, API keys, session secrets, or uploaded files.
+
+## Legacy ReceiptIQ Reference
 
 ## API connection
 
